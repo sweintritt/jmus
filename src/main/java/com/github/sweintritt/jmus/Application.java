@@ -7,7 +7,6 @@ import javafx.scene.media.MediaPlayer;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
@@ -16,9 +15,10 @@ import java.util.*;
 @Slf4j
 @Getter
 @Setter
-public class Application implements Runnable {
+public class Application {
 
-    private List<Command> commands;
+    private final Random random = new Random();
+    private final UI ui = new UI();
     private List<File> files;
     private MediaPlayer player;
     private Media media;
@@ -26,7 +26,7 @@ public class Application implements Runnable {
 
     public static void main(String[] args) {
         if (args.length < 1) {
-            log.error("No file or directory given");
+            System.err.println("No file or directory given");
             System.exit(1);
         }
 
@@ -40,15 +40,14 @@ public class Application implements Runnable {
             log.info("found {} files", files.size());
         } else {
             log.error("{} is no file or directory", file.getName());
-            // TODO Better return code
             System.exit(1);
         }
 
         final Application application = new Application();
         application.setFiles(files);
-        application.commands = List.of(new QuitCommand(application), new NextCommand(application));
         log.info("starting");
-        Platform.startup(application);
+        Platform.startup(() -> log.info("initializing javafx"));
+        application.run();
     }
 
     private static void getAllFiles(final File dir, final List<File> result) {
@@ -65,47 +64,43 @@ public class Application implements Runnable {
         }
     }
 
-    @Override
     public void run() {
         running = true;
-        nextFile();
+        next();
         while (running) {
+            ui.draw();
             final Scanner scanner = new Scanner(System.in);
-            log.info("jmus> ");
             final String input = scanner.nextLine();
-            final String[] chunks = input.split(" ");
 
-            if (StringUtils.isNotBlank(input)) {
-                final String cmd = chunks[0];
-                for (final Command c : commands) {
-                    if (c.getName().equals(cmd) || c.getAliases().contains(cmd)) {
-                        try {
-                            c.execute(Arrays.copyOfRange(chunks, 1, chunks.length));
-                        } catch (final ParseException e) {
-                            log.error(e.getMessage());
-                        }
-                    }
-                }
+            switch (input) {
+                case "n", "next":
+                    next();
+                    break;
+                case "p", "play":
+                    play();
+                    break;
+                case "s", "stop":
+                    stop();
+                    break;
+                case "q", "quit":
+                    quit();
+                    break;
+                default:
+                    ui.addMessage("unknown command " + input);
+                    break;
             }
         }
     }
 
-    public void nextFile() {
+    private void next() {
         log.debug("selecting next file");
         Optional.ofNullable(player).ifPresent(MediaPlayer::stop);
         Optional.ofNullable(player).ifPresent(MediaPlayer::dispose);
-        play();
-    }
-
-    public void setOnEndOfMedia() {
-        nextFile();
-    }
-
-    private void play() {
         try {
-            final int index = (int) Math.floor(Math.random()*files.size());
+            final int index = random.nextInt(files.size());
             final File file = files.get(index);
             log.info("playing {}", file.getName());
+            ui.addMessage("playing " + file.getName());
             media = new Media(file.toURI().toString());
             player = new MediaPlayer(media);
             player.setOnEndOfMedia(this::setOnEndOfMedia);
@@ -118,5 +113,23 @@ public class Application implements Runnable {
         } catch (final Exception e) {
             log.error("Error during playback: {} ", e.getMessage(), e);
         }
+    }
+
+    private void setOnEndOfMedia() {
+        next();
+    }
+
+    private void stop() {
+        Optional.ofNullable(player).ifPresent(MediaPlayer::pause);
+    }
+
+    private void play() {
+        Optional.ofNullable(player).ifPresent(MediaPlayer::play);
+    }
+
+    private void quit() {
+        setRunning(false);
+        Optional.ofNullable(player).ifPresent(MediaPlayer::stop);
+        Platform.exit();
     }
 }
