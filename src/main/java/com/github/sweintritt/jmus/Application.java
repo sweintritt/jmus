@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 
 @Slf4j
@@ -24,7 +25,7 @@ public class Application {
     private Media media;
     private boolean running;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         if (args.length < 1) {
             System.err.println("No file or directory given");
             System.exit(1);
@@ -47,6 +48,7 @@ public class Application {
         application.setFiles(files);
         log.info("starting");
         Platform.startup(() -> log.info("initializing javafx"));
+        application.ui.enableRawMode();
         application.run();
     }
 
@@ -64,29 +66,31 @@ public class Application {
         }
     }
 
-    public void run() {
+    public void run() throws IOException {
         running = true;
+        ui.addMessage("found " + files.size() + " audio files");
         next();
         while (running) {
             ui.draw();
-            final Scanner scanner = new Scanner(System.in);
-            final String input = scanner.nextLine();
 
-            switch (input) {
-                case "n", "next":
+            final Scanner scanner = new Scanner(System.in);
+            final int key = System.in.read();
+
+            switch (key) {
+                case 'n':
                     next();
                     break;
-                case "p", "play":
+                case 'p':
                     play();
                     break;
-                case "s", "stop":
+                case 's':
                     stop();
                     break;
-                case "q", "quit":
+                case 'q':
                     quit();
                     break;
                 default:
-                    ui.addMessage("unknown command " + input);
+                    ui.addMessage("unknown key " + key);
                     break;
             }
         }
