@@ -10,7 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.*;
 
 @Slf4j
@@ -18,10 +17,9 @@ import java.util.*;
 @Setter
 public class Application {
 
-    private static final String PROMPT = "[ jmus v1.0 | vol:%d | %s] (q)uit, (s)top, (p)lay, (n)ext, (+)volume, (-)volume";
+    private static final String STATUS = "[ jmus v1.0 | vol:%d | %s ] (q)uit, (s)top, (p)lay, (n)ext, (+)volume, (-)volume";
 
     private final Random random = new Random();
-    private final int rows = 49;
     private final List<String> messages = new LinkedList<>();
     private State state = State.SEARCHING;
     /**
@@ -33,7 +31,7 @@ public class Application {
     private Media media;
     private boolean running;
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
         if (args.length < 1) {
             System.err.println("No file or directory given");
             System.exit(1);
@@ -64,7 +62,8 @@ public class Application {
         final File[] files = dir.listFiles();
         if(files != null) {
             for (final File file : files) {
-                if (file.isFile()) {
+                // For now just mp3s is fine
+                if (file.isFile() && StringUtils.endsWithIgnoreCase(file.getName(), ".mp3")) {
                     result.add(file);
                 } else if (file.isDirectory()) {
                     getAllFiles(file, result);
@@ -73,37 +72,44 @@ public class Application {
         }
     }
 
-    public void run() throws IOException {
-        running = true;
-        addMessage("found " + files.size() + " audio files");
-        next();
-        while (running) {
-            draw();
-
-            final int key = System.in.read();
-
-            switch (key) {
-                case 'n':
-                    next();
-                    break;
-                case 'p':
-                    play();
-                    break;
-                case 's':
-                    stop();
-                    break;
-                case 'q':
-                    quit();
-                    break;
-                case '+':
-                    player.setVolume(Math.min(player.getVolume() + 0.1, 1.0));
-                    break;
-                case '-':
-                    player.setVolume(Math.max(player.getVolume() - 0.1, 0.0));
-                    break;
-                default:
-                    break;
+    public void run() {
+        try {
+            running = true;
+            addMessage("found " + files.size() + " audio files");
+            next();
+            while (running) {
+                draw();
+                final int key = System.in.read();
+                handleKey(key);
             }
+        } catch (final Exception e) {
+            log.error(e.getMessage(), e);
+            System.err.println("Error: " + e.getMessage());
+        }
+    }
+
+    private void handleKey(final int key) {
+        switch (key) {
+            case 'n':
+                next();
+                break;
+            case 'p':
+                play();
+                break;
+            case 's':
+                stop();
+                break;
+            case 'q':
+                quit();
+                break;
+            case '+':
+                player.setVolume(Math.min(player.getVolume() + 0.1, 1.0));
+                break;
+            case '-':
+                player.setVolume(Math.max(player.getVolume() - 0.1, 0.0));
+                break;
+            default:
+                break;
         }
     }
 
@@ -115,13 +121,18 @@ public class Application {
             final int index = random.nextInt(files.size());
             final File file = files.get(index);
             log.info("playing {}", file.getName());
-            addMessage("playing " + file.getName());
+
             media = new Media(file.toURI().toString());
+            final Map<String, Object> meta = media.getMetadata();
+            log.debug("metadata: {}", meta);
             player = new MediaPlayer(media);
             player.setOnEndOfMedia(this::setOnEndOfMedia);
             player.setVolume(0.5);
-            player.play();
+            play();
             state = State.PLAYING;
+            log.debug("metadata: {}", player.getMedia().getMetadata());
+            // TODO null null null
+            addMessage(media.getMetadata().get("artist") + "\t" + media.getMetadata().get("album") + "\t" + media.getMetadata().get("title"));
         } catch (final MediaException e) {
             if (!StringUtils.equals(e.getMessage(), "Unrecognized file signature!")) {
                 log.error("Error during playback: {} ", e.getMessage(), e);
@@ -133,6 +144,7 @@ public class Application {
 
     private void setOnEndOfMedia() {
         next();
+        draw();
     }
 
     private void stop() {
@@ -149,6 +161,15 @@ public class Application {
         setRunning(false);
         Optional.ofNullable(player).ifPresent(MediaPlayer::stop);
         Platform.exit();
+    }
+
+    public LibC.Winsize getWindowsize() {
+        final LibC.Winsize winsize = new LibC.Winsize();
+        final int rc = LibC.INSTANCE.ioctl(LibC.SYSTEM_OUT_FD, LibC.TIOCGWINSZ, winsize);
+        if (rc != 0) {
+            throw new IllegalStateException("error calling libc.ioctl rc: " + rc);
+        }
+        return winsize;
     }
 
     public void enableRawMode() {
@@ -179,24 +200,30 @@ public class Application {
     }
 
     public void draw() {
+        final LibC.Winsize winsize = getWindowsize();
         System.out.print("\033[2J");
-        final int start = Math.max(0, messages.size() - rows);
+        System.out.print("\033[H");
+        final int start = Math.max(0, messages.size() - winsize.ws_row);
 
-        for (int i = 0; i < Math.max(0, rows - messages.size()); ++i) {
+        for (int i = 0; i < Math.max(0, winsize.ws_row - messages.size()); ++i) {
             System.out.print("\r\n");
+        }
+
+        while (messages.size() > winsize.ws_row) {
+            this.messages.removeFirst();
         }
 
         for (int i = start; i < messages.size(); ++i) {
             System.out.print(messages.get(i) + "\r\n");
         }
 
-        System.out.print(String.format(PROMPT, (int) (player.getVolume() * 100.0), state.toString().toLowerCase()));
+        final String status = String.format(STATUS,
+                (int) (player.getVolume() * 100.0),
+                state.toString().toLowerCase());
+        System.out.print("\033[7m" + status + " ".repeat(Math.max(0, winsize.ws_col - status.length())) + "\033[0m");
     }
 
     public void addMessage(final String msg) {
         this.messages.add(msg);
-        if (messages.size() > rows) {
-            this.messages.removeFirst();
-        }
     }
 }

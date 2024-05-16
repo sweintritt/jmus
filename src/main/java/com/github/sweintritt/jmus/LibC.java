@@ -25,7 +25,7 @@ public interface LibC extends Library {
 
     @NoArgsConstructor
     @ToString
-    @Structure.FieldOrder(value = {"c_iflag", "c_oflag", "c_cflag", "c_lflag", "c_cc"})
+    @Structure.FieldOrder({"c_iflag", "c_oflag", "c_cflag", "c_lflag", "c_cc"})
     class Termios extends Structure {
 
         private static final int NCCS = 19;
@@ -62,6 +62,15 @@ public interface LibC extends Library {
         }
     }
 
+    @Structure.FieldOrder({"ws_row", "ws_col", "ws_xpixel", "ws_ypixel"})
+    class Winsize extends Structure {
+        public short ws_row;
+        public short ws_col;
+        public short ws_xpixel;
+        public short ws_ypixel;
+    }
+
     int tcgetattr(int fd, Termios termios);
     int tcsetattr(int fd, int optional_actions, Termios termios);
+    int ioctl(int fd, int opt, Winsize winsize);
 }
