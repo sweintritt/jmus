@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Triple;
 
 import java.io.File;
 import java.util.*;
@@ -17,10 +18,10 @@ import java.util.*;
 @Setter
 public class Application {
 
-    private static final String STATUS = "[ jmus v1.0 | vol:%d | %s ] (q)uit, (s)top, (p)lay, (n)ext, (+)volume, (-)volume";
+    private static final String STATUS = "[ jmus v1.0 | %d files | vol:%d | %s ] (q)uit, (s)top, (p)lay, (n)ext, (+)volume, (-)volume";
 
     private final Random random = new Random();
-    private final List<String> messages = new LinkedList<>();
+    private final List<Triple<String, String, String>> titlelist = new LinkedList<>();
     private State state = State.SEARCHING;
     /**
      * Backup of the original values
@@ -75,7 +76,6 @@ public class Application {
     public void run() {
         try {
             running = true;
-            addMessage("found " + files.size() + " audio files");
             next();
             while (running) {
                 draw();
@@ -131,8 +131,10 @@ public class Application {
             play();
             state = State.PLAYING;
             log.debug("metadata: {}", player.getMedia().getMetadata());
-            // TODO null null null
-            addMessage(media.getMetadata().get("artist") + "\t" + media.getMetadata().get("album") + "\t" + media.getMetadata().get("title"));
+            player.setOnReady(() -> {
+                addMessage(media);
+                draw();
+            });
         } catch (final MediaException e) {
             if (!StringUtils.equals(e.getMessage(), "Unrecognized file signature!")) {
                 log.error("Error during playback: {} ", e.getMessage(), e);
@@ -182,8 +184,7 @@ public class Application {
         termios.c_lflag &= ~(LibC.ECHO | LibC.ICANON | LibC.IEXTEN | LibC.ISIG);
         termios.c_iflag &= ~(LibC.IXON | LibC.ICRNL);
         termios.c_oflag &= ~(LibC.OPOST);
-//        termios.c_cc[LibC.VMIN] = 0;
-//        termios.c_cc[LibC.VTIME] = 1;
+
         rc = LibC.INSTANCE.tcsetattr(LibC.SYSTEM_OUT_FD, LibC.TCSAFLUSH, termios);
         if (rc != 0) {
             throw new IllegalStateException("error calling libc.tcsetattr rc: " + rc);
@@ -203,27 +204,43 @@ public class Application {
         final LibC.Winsize winsize = getWindowsize();
         System.out.print("\033[2J");
         System.out.print("\033[H");
-        final int start = Math.max(0, messages.size() - winsize.ws_row);
+        final int start = Math.max(0, titlelist.size() - winsize.ws_row);
 
-        for (int i = 0; i < Math.max(0, winsize.ws_row - messages.size()); ++i) {
+        for (int i = 0; i < Math.max(0, winsize.ws_row - titlelist.size()); ++i) {
             System.out.print("\r\n");
         }
 
-        while (messages.size() > winsize.ws_row) {
-            this.messages.removeFirst();
+        while (titlelist.size() > winsize.ws_row) {
+            this.titlelist.removeFirst();
         }
 
-        for (int i = start; i < messages.size(); ++i) {
-            System.out.print(messages.get(i) + "\r\n");
+        final int length = Math.max(0, winsize.ws_col / 3);
+        for (int i = start; i < titlelist.size(); ++i) {
+            final String artist = titlelist.get(i).getLeft();
+            final String album = titlelist.get(i).getMiddle();
+            final String title = titlelist.get(i).getRight();
+            String fullTitle = artist + " ".repeat(Math.max(0, length - artist.length())) +
+                    titlelist.get(i).getMiddle() + " ".repeat(Math.max(0, length - album.length())) +
+                    titlelist.get(i).getRight() + " ".repeat(Math.max(0, length - title.length()));
+
+            if (i == titlelist.size() - 1) {
+                fullTitle = "\033[1;44;1;37m" + fullTitle + "\033[0m";
+            }
+
+            System.out.print(fullTitle + "\r\n");
         }
 
         final String status = String.format(STATUS,
+                files.size(),
                 (int) (player.getVolume() * 100.0),
                 state.toString().toLowerCase());
         System.out.print("\033[7m" + status + " ".repeat(Math.max(0, winsize.ws_col - status.length())) + "\033[0m");
     }
 
-    public void addMessage(final String msg) {
-        this.messages.add(msg);
+    public void addMessage(final Media media) {
+        this.titlelist.add(Triple.of(
+                (String) media.getMetadata().get("artist"),
+                (String) media.getMetadata().get("album"),
+                (String) media.getMetadata().get("title")));
     }
 }
