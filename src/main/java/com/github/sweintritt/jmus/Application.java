@@ -123,15 +123,13 @@ public class Application {
             log.info("playing {}", file.getName());
 
             media = new Media(file.toURI().toString());
-            final Map<String, Object> meta = media.getMetadata();
-            log.debug("metadata: {}", meta);
             player = new MediaPlayer(media);
             player.setOnEndOfMedia(this::setOnEndOfMedia);
             player.setVolume(0.5);
             play();
             state = State.PLAYING;
-            log.debug("metadata: {}", player.getMedia().getMetadata());
             player.setOnReady(() -> {
+                log.debug("metadata: {}", player.getMedia().getMetadata());
                 addMessage(media);
                 draw();
             });
@@ -216,13 +214,11 @@ public class Application {
 
         final int length = Math.max(0, winsize.ws_col / 3);
         for (int i = start; i < titlelist.size(); ++i) {
-            final String artist = titlelist.get(i).getLeft();
-            final String album = titlelist.get(i).getMiddle();
-            final String title = titlelist.get(i).getRight();
-            String fullTitle = artist + " ".repeat(Math.max(0, length - artist.length())) +
-                    titlelist.get(i).getMiddle() + " ".repeat(Math.max(0, length - album.length())) +
-                    titlelist.get(i).getRight() + " ".repeat(Math.max(0, length - title.length()));
+            String fullTitle = fitToWidth(titlelist.get(i).getLeft(), length) +
+                    fitToWidth(titlelist.get(i).getMiddle(), length) +
+                    fitToWidth(titlelist.get(i).getRight(), length);
 
+            log.debug("length full title: {}, column width: {}, window columns: {}", fullTitle.length(), length, winsize.ws_col);
             if (i == titlelist.size() - 1) {
                 fullTitle = "\033[1;44;1;37m" + fullTitle + "\033[0m";
             }
@@ -235,6 +231,10 @@ public class Application {
                 (int) (player.getVolume() * 100.0),
                 state.toString().toLowerCase());
         System.out.print("\033[7m" + status + " ".repeat(Math.max(0, winsize.ws_col - status.length())) + "\033[0m");
+    }
+
+    private String fitToWidth(final String message, final int width) {
+        return StringUtils.abbreviate(message, width) + " ".repeat(Math.max(0, width - StringUtils.length(message)));
     }
 
     public void addMessage(final Media media) {
