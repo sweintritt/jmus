@@ -35,7 +35,7 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
 
-        <main.class>com.github.sweintritt.jmus.Application</main.class>
+        <main.class>com.github.sweintritt.jmus.Main</main.class>
 
         <!-- Library versions -->
         <version.javafx>21.0.1</version.javafx>
@@ -47,6 +47,9 @@
         <version.lombok>1.18.32</version.lombok>
         <version.slf4j>1.7.36</version.slf4j>
         <version.jna>5.14.0</version.jna>
+        <version.assertj>3.26.0</version.assertj>
+        <version.mockito>5.12.0</version.mockito>
+        <version.junit>5.10.3</version.junit>
 
         <!-- Plugin Versions -->
         <version.maven-compiler-plugin>3.13.0</version.maven-compiler-plugin>
@@ -68,14 +71,12 @@
             <artifactId>commons-cli</artifactId>
             <version>${version.commons-cli}</version>
         </dependency>
-
         <!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <version>${version.commons.io}</version>
         </dependency>
-
         <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -123,6 +124,27 @@
             <groupId>net.java.dev.jna</groupId>
             <artifactId>jna</artifactId>
             <version>${version.jna}</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.assertj/assertj-core -->
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>${version.assertj}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${version.junit}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.mockito/mockito-core -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>${version.mockito}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

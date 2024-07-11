@@ -32,47 +32,6 @@ public class Application {
     private Media media;
     private boolean running;
 
-    public static void main(String[] args) {
-        if (args.length < 1) {
-            System.err.println("No file or directory given");
-            System.exit(1);
-        }
-
-        final File file = new File(args[0]);
-        final List<File> files = new ArrayList<>();
-        if (file.isFile()) {
-            files.add(file);
-        } else if (file.isDirectory()) {
-            getAllFiles(file, files);
-            log.info("found {} files", files.size());
-        } else {
-            log.error("{} is no file or directory", file.getName());
-            System.exit(1);
-        }
-
-        final Application application = new Application();
-        application.setFiles(files);
-        log.info("starting");
-        Platform.startup(() -> log.info("initializing javafx"));
-        application.enableRawMode();
-        application.run();
-    }
-
-    private static void getAllFiles(final File dir, final List<File> result) {
-        log.info("searching {}", dir.getName());
-        final File[] files = dir.listFiles();
-        if(files != null) {
-            for (final File file : files) {
-                // For now just mp3s is fine
-                if (file.isFile() && StringUtils.endsWithIgnoreCase(file.getName(), ".mp3")) {
-                    result.add(file);
-                } else if (file.isDirectory()) {
-                    getAllFiles(file, result);
-                }
-            }
-        }
-    }
-
     public void run() {
         try {
             running = true;
@@ -88,7 +47,7 @@ public class Application {
         }
     }
 
-    private void handleKey(final int key) {
+    public void handleKey(final int key) {
         switch (key) {
             case 'n':
                 next();
@@ -113,7 +72,7 @@ public class Application {
         }
     }
 
-    private void next() {
+    public void next() {
         log.debug("selecting next file");
         Optional.ofNullable(player).ifPresent(MediaPlayer::stop);
         Optional.ofNullable(player).ifPresent(MediaPlayer::dispose);
@@ -142,22 +101,22 @@ public class Application {
         }
     }
 
-    private void setOnEndOfMedia() {
+    public void setOnEndOfMedia() {
         next();
         draw();
     }
 
-    private void stop() {
+    public void stop() {
         Optional.ofNullable(player).ifPresent(MediaPlayer::pause);
         state = State.STOPPED;
     }
 
-    private void play() {
+    public void play() {
         Optional.ofNullable(player).ifPresent(MediaPlayer::play);
         state = State.PLAYING;
     }
 
-    private void quit() {
+    public void quit() {
         setRunning(false);
         Optional.ofNullable(player).ifPresent(MediaPlayer::stop);
         Platform.exit();
@@ -212,13 +171,11 @@ public class Application {
             this.titlelist.removeFirst();
         }
 
-        final int length = Math.max(0, winsize.ws_col / 3);
+        final int columnLength = Math.max(0, winsize.ws_col / 3);
         for (int i = start; i < titlelist.size(); ++i) {
-            String fullTitle = fitToWidth(titlelist.get(i).getLeft(), length) +
-                    fitToWidth(titlelist.get(i).getMiddle(), length) +
-                    fitToWidth(titlelist.get(i).getRight(), length);
+            String fullTitle = getFullTitle(titlelist.get(i), columnLength);
 
-            log.debug("length full title: {}, column width: {}, window columns: {}", fullTitle.length(), length, winsize.ws_col);
+            log.debug("length full title: {}, column width: {}, window columns: {}", fullTitle.length(), columnLength, winsize.ws_col);
             if (i == titlelist.size() - 1) {
                 fullTitle = "\033[1;44;1;37m" + fullTitle + "\033[0m";
             }
@@ -233,8 +190,13 @@ public class Application {
         System.out.print("\033[7m" + status + " ".repeat(Math.max(0, winsize.ws_col - status.length())) + "\033[0m");
     }
 
-    private String fitToWidth(final String message, final int width) {
-        return StringUtils.abbreviate(message, width) + " ".repeat(Math.max(0, width - StringUtils.length(message)));
+    public String getFullTitle(final Triple<String, String, String> entry, final int columnLength) {
+        return fitToWidth(entry.getLeft(), columnLength) + fitToWidth(entry.getMiddle(), columnLength) + fitToWidth(entry.getRight(), columnLength);
+    }
+
+    public String fitToWidth(final String message, final int width) {
+        final String msg = StringUtils.trim(message);
+        return StringUtils.abbreviate(StringUtils.trim(msg), width) + StringUtils.SPACE.repeat(Math.max(0, width - StringUtils.length(msg)));
     }
 
     public void addMessage(final Media media) {
