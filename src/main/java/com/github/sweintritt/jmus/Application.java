@@ -174,7 +174,9 @@ public class Application {
         final int columnLength = Math.max(0, winsize.ws_col / 3);
         for (int i = start; i < titlelist.size(); ++i) {
             String fullTitle = getFullTitle(titlelist.get(i), columnLength);
-
+            if (StringUtils.isBlank(fullTitle)) {
+                log.warn("Message is empty: {}", titlelist.get(i));
+            }
             log.debug("length full title: {}, column width: {}, window columns: {}", fullTitle.length(), columnLength, winsize.ws_col);
             if (i == titlelist.size() - 1) {
                 fullTitle = "\033[1;44;1;37m" + fullTitle + "\033[0m";
@@ -196,7 +198,8 @@ public class Application {
 
     public String fitToWidth(final String message, final int width) {
         final String msg = StringUtils.trim(message);
-        return StringUtils.abbreviate(StringUtils.trim(msg), width) + StringUtils.SPACE.repeat(Math.max(0, width - StringUtils.length(msg)));
+        return StringUtils.abbreviate(StringUtils.trim(msg), "... ", width) 
+            + StringUtils.SPACE.repeat(Math.max(0, width - StringUtils.length(msg)));
     }
 
     public void addMessage(final Media media) {
