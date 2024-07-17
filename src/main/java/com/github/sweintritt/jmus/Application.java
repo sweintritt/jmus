@@ -7,10 +7,15 @@ import javafx.scene.media.MediaPlayer;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Triple;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @Slf4j
@@ -18,11 +23,12 @@ import java.util.*;
 @Setter
 public class Application {
 
-    private static final String STATUS = "[ jmus v1.0 | %d files | vol:%d | %s ] (q)uit, (s)top, (p)lay, (n)ext, (+)volume, (-)volume";
+    private static final String STATUS = "[ jmus %s | %d files | vol:%d | %s ] (q)uit, (s)top, (p)lay, (n)ext, (+)volume, (-)volume";
 
     private final Random random = new Random();
     private final List<Triple<String, String, String>> titlelist = new LinkedList<>();
     private State state = State.SEARCHING;
+    private String version;
     /**
      * Backup of the original values
      */
@@ -43,7 +49,9 @@ public class Application {
             }
         } catch (final Exception e) {
             log.error(e.getMessage(), e);
+            disableRawMode();
             System.err.println("Error: " + e.getMessage());
+            return;
         }
     }
 
@@ -186,10 +194,23 @@ public class Application {
         }
 
         final String status = String.format(STATUS,
+                getVersion(),
                 files.size(),
                 (int) (player.getVolume() * 100.0),
                 state.toString().toLowerCase());
         System.out.print("\033[7m" + status + " ".repeat(Math.max(0, winsize.ws_col - status.length())) + "\033[0m");
+    }
+
+    public String getVersion() {
+        if (version == null) {
+            try {
+                version = "v" + new String(IOUtils.toByteArray(this.getClass().getClassLoader().getResourceAsStream("version.txt")));
+            } catch (final IOException e) {
+                log.error("Unable to read version: {}", e.getMessage(), e);
+                version = StringUtils.EMPTY;
+            }
+        }
+        return version;
     }
 
     public String getFullTitle(final Triple<String, String, String> entry, final int columnLength) {
