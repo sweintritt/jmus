@@ -50,6 +50,7 @@
         <version.assertj>3.26.0</version.assertj>
         <version.mockito>5.12.0</version.mockito>
         <version.junit>5.10.3</version.junit>
+        <version.tika>2.9.2</version.tika>
 
         <!-- Plugin Versions -->
         <version.maven-compiler-plugin>3.13.0</version.maven-compiler-plugin>
@@ -125,6 +126,27 @@
             <artifactId>jna</artifactId>
             <version>${version.jna}</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/org.apache.tika/tika-core -->
+        <dependency>
+            <groupId>org.apache.tika</groupId>
+            <artifactId>tika-core</artifactId>
+            <version>${version.tika}</version>
+        </dependency>
+
+<!-- https://mvnrepository.com/artifact/net.jthink/jaudiotagger -->
+<dependency>
+    <groupId>net.jthink</groupId>
+    <artifactId>jaudiotagger</artifactId>
+    <version>3.0.1</version>
+</dependency>
+
+
+        <!-- https://mvnrepository.com/artifact/org.apache.tika/tika-parsers-standard-package -->
+        <dependency>
+            <groupId>org.apache.tika</groupId>
+            <artifactId>tika-parsers-standard-package</artifactId>
+            <version>${version.tika}</version>
+        </dependency>
         <!-- https://mvnrepository.com/artifact/org.assertj/assertj-core -->
         <dependency>
             <groupId>org.assertj</groupId>
@@ -191,32 +213,35 @@
                     </archive>
                 </configuration>
             </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
                 <version>${version.maven-shade-plugin}</version>
                 <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <filters>
-                                <filter>
-                                    <artifact>*:*</artifact>
-                                    <excludes>
-                                        <!--
-                                       <exclude>*.xml</exclude>
-                                       <exclude>*.xsd</exclude>
-                                       -->
-                                    </excludes>
-                                </filter>
-                            </filters>
-                        </configuration>
-                    </execution>
+                   <execution>
+                      <phase>package</phase>
+                      <goals>
+                         <goal>shade</goal>
+                      </goals>
+                      <configuration>
+                         <filter>
+                            <filter>
+                               <artifact>*:*</artifact>
+                               <includes>
+                                 <include>log4j2.xml</include>
+                               </includes>
+                               <excludes>
+                                  <exclude>META-INF/*.SF</exclude>
+                                  <exclude>META-INF/*.DSA</exclude>
+                                  <exclude>META-INF/*.RSA</exclude>
+                               </excludes>
+                            </filter>
+                         </filters>
+                      </configuration>
+                   </execution>
                 </executions>
-            </plugin>
+             </plugin>
         </plugins>
     </build>
 </project>

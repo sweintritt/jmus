@@ -8,14 +8,14 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Triple;
+import org.apache.tika.exception.TikaException;
+import org.xml.sax.SAXException;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @Slf4j
@@ -27,19 +27,32 @@ public class Application {
 
     private final Random random = new Random();
     private final List<Triple<String, String, String>> titlelist = new LinkedList<>();
+    private final List<Entry> entries = new ArrayList<>();
     private State state = State.SEARCHING;
     private String version;
     /**
      * Backup of the original values
      */
     private LibC.Termios backup;
-    private List<File> files;
+    /**
+     * Root directory to scan for music
+     */
+    private File directory;
+    private int index = 0;
     private MediaPlayer player;
     private Media media;
     private boolean running;
 
     public void run() {
         try {
+            enableRawMode();
+            //draw();
+            log.info("scanning for files");
+            loadFiles(directory);
+            log.info("found {} files", entries.size());
+            state = State.STOPPED;
+            Collections.shuffle(entries);
+
             running = true;
             next();
             while (running) {
@@ -48,10 +61,24 @@ public class Application {
                 handleKey(key);
             }
         } catch (final Exception e) {
+            quit();
             log.error(e.getMessage(), e);
-            disableRawMode();
             System.err.println("Error: " + e.getMessage());
-            return;
+        }
+    }
+
+    private void loadFiles(final File dir) throws IOException, SAXException, TikaException {
+        log.info("searching {}", dir.getName());
+        final File[] files = dir.listFiles();
+        if(files != null) {
+            for (final File file : files) {
+                // For now just mp3s is fine
+                if (file.isFile() && StringUtils.endsWithIgnoreCase(file.getName(), ".mp3")) {
+                    entries.add(new Entry(file));
+                } else if (file.isDirectory()) {
+                    loadFiles(file);
+                }
+            }
         }
     }
 
@@ -85,19 +112,17 @@ public class Application {
         Optional.ofNullable(player).ifPresent(MediaPlayer::stop);
         Optional.ofNullable(player).ifPresent(MediaPlayer::dispose);
         try {
-            final int index = random.nextInt(files.size());
-            final File file = files.get(index);
-            log.info("playing {}", file.getName());
-
-            media = new Media(file.toURI().toString());
+            final Entry entry = entries.get(getNextIndex());
+            log.info("playing {}", entry.getFile().getName());
+            final Media media = new Media(entry.getFile().toURI().toString());
             player = new MediaPlayer(media);
             player.setOnEndOfMedia(this::setOnEndOfMedia);
             player.setVolume(0.5);
             play();
             state = State.PLAYING;
             player.setOnReady(() -> {
-                log.debug("metadata: {}", player.getMedia().getMetadata());
-                addMessage(media);
+                // log.debug("metadata: {}", player.getMedia().getMetadata());
+                addMessage(entry);
                 draw();
             });
         } catch (final MediaException e) {
@@ -107,6 +132,14 @@ public class Application {
         } catch (final Exception e) {
             log.error("Error during playback: {} ", e.getMessage(), e);
         }
+    }
+
+    public int getNextIndex() {
+        if (index > entries.size()) {
+            index = 0;
+        }
+
+        return index++;
     }
 
     public void setOnEndOfMedia() {
@@ -125,6 +158,7 @@ public class Application {
     }
 
     public void quit() {
+        disableRawMode();
         setRunning(false);
         Optional.ofNullable(player).ifPresent(MediaPlayer::stop);
         Platform.exit();
@@ -140,6 +174,7 @@ public class Application {
     }
 
     public void enableRawMode() {
+        log.debug("enable terminal raw mode");
         final LibC.Termios termios = new LibC.Termios();
         int rc = LibC.INSTANCE.tcgetattr(LibC.SYSTEM_OUT_FD, termios);
         if (rc != 0) {
@@ -159,6 +194,7 @@ public class Application {
     }
 
     public void disableRawMode() {
+        log.debug("reset terminal");
         final int rc = LibC.INSTANCE.tcsetattr(LibC.SYSTEM_OUT_FD, LibC.TCSAFLUSH, backup);
         if (rc != 0) {
             throw new IllegalStateException("error calling libc.tcsetattr rc: " + rc);
@@ -195,8 +231,8 @@ public class Application {
 
         final String status = String.format(STATUS,
                 getVersion(),
-                files.size(),
-                (int) (player.getVolume() * 100.0),
+                entries.size(),
+                (int) (Optional.ofNullable(player).map(MediaPlayer::getVolume).orElse(0d) * 100.0),
                 state.toString().toLowerCase());
         System.out.print("\033[7m" + status + " ".repeat(Math.max(0, winsize.ws_col - status.length())) + "\033[0m");
     }
@@ -223,10 +259,7 @@ public class Application {
             + StringUtils.SPACE.repeat(Math.max(0, width - StringUtils.length(msg)));
     }
 
-    public void addMessage(final Media media) {
-        this.titlelist.add(Triple.of(
-                (String) media.getMetadata().get("artist"),
-                (String) media.getMetadata().get("album"),
-                (String) media.getMetadata().get("title")));
+    public void addMessage(final Entry e) {
+        this.titlelist.add(Triple.of(e.getArtist(), e.getAlbum(), e.getTitle()));
     }
 }
