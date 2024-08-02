@@ -1,15 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="WARN">
-
+<Configuration status="warn">
     <Appenders>
-        <Console target="SYSTEM_OUT">
-            <PatternLayout pattern="%d{HH:mm:ss.SSS} %-5level %t [%logger{36}] %msg%n"/>
-        </Console>
+        <File name="logfile" fileName="${sys:user.home}/.jmus.log">
+            <PatternLayout pattern="%-5level (%-8t) [%-28c{1.}] %msg%n"/>
+        </File>
     </Appenders>
 
     <Loggers>
         <Root level="debug">
-            <AppenderRef ref="Console"/>
+            <AppenderRef ref="logfile"/>
         </Root>
     </Loggers>
 </Configuration>

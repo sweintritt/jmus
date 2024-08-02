@@ -155,7 +155,7 @@
                 <directory>src/main/resources</directory>
                 <filtering>true</filtering>
                 <includes>
-                    <include>version.txt</include>
+                    <include>*</include>
                 </includes>
             </resource>
         </resources>
@@ -207,14 +207,11 @@
                          <filters>
                             <filter>
                                <artifact>*:*</artifact>
-                               <!--includes>
-                                 <include>log4j2.xml</include>
-                               </includes-->
-                               <!--excludes>
-                                  <exclude>META-INF/*.SF</exclude>
+                               <excludes>
+                                  <!--exclude>META-INF/*.SF</exclude>
                                   <exclude>META-INF/*.DSA</exclude>
-                                  <exclude>META-INF/*.RSA</exclude>
-                               </excludes-->
+                                  <exclude>META-INF/*.RSA</exclude-->
+                               </excludes>
                             </filter>
                          </filters>
                       </configuration>
