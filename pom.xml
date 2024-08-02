@@ -126,26 +126,11 @@
             <artifactId>jna</artifactId>
             <version>${version.jna}</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/org.apache.tika/tika-core -->
+        <!-- https://mvnrepository.com/artifact/com.mpatric/mp3agic -->
         <dependency>
-            <groupId>org.apache.tika</groupId>
-            <artifactId>tika-core</artifactId>
-            <version>${version.tika}</version>
-        </dependency>
-
-<!-- https://mvnrepository.com/artifact/net.jthink/jaudiotagger -->
-<dependency>
-    <groupId>net.jthink</groupId>
-    <artifactId>jaudiotagger</artifactId>
-    <version>3.0.1</version>
-</dependency>
-
-
-        <!-- https://mvnrepository.com/artifact/org.apache.tika/tika-parsers-standard-package -->
-        <dependency>
-            <groupId>org.apache.tika</groupId>
-            <artifactId>tika-parsers-standard-package</artifactId>
-            <version>${version.tika}</version>
+            <groupId>com.mpatric</groupId>
+            <artifactId>mp3agic</artifactId>
+            <version>0.9.1</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.assertj/assertj-core -->
         <dependency>
@@ -225,17 +210,17 @@
                          <goal>shade</goal>
                       </goals>
                       <configuration>
-                         <filter>
+                         <filters>
                             <filter>
                                <artifact>*:*</artifact>
-                               <includes>
+                               <!--includes>
                                  <include>log4j2.xml</include>
-                               </includes>
-                               <excludes>
+                               </includes-->
+                               <!--excludes>
                                   <exclude>META-INF/*.SF</exclude>
                                   <exclude>META-INF/*.DSA</exclude>
                                   <exclude>META-INF/*.RSA</exclude>
-                               </excludes>
+                               </excludes-->
                             </filter>
                          </filters>
                       </configuration>

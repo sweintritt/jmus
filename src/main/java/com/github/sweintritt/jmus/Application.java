@@ -11,8 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Triple;
-import org.apache.tika.exception.TikaException;
-import org.xml.sax.SAXException;
 
 import java.io.File;
 import java.io.IOException;
@@ -67,7 +65,7 @@ public class Application {
         }
     }
 
-    private void loadFiles(final File dir) throws IOException, SAXException, TikaException {
+    private void loadFiles(final File dir) {
         log.info("searching {}", dir.getName());
         final File[] files = dir.listFiles();
         if(files != null) {
@@ -121,7 +119,6 @@ public class Application {
             play();
             state = State.PLAYING;
             player.setOnReady(() -> {
-                // log.debug("metadata: {}", player.getMedia().getMetadata());
                 addMessage(entry);
                 draw();
             });

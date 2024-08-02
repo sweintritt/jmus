@@ -7,49 +7,79 @@ import java.io.IOException;
 import java.util.Comparator;
 import java.util.Optional;
 
+import com.mpatric.mp3agic.ID3v1;
+import com.mpatric.mp3agic.ID3v2;
+import com.mpatric.mp3agic.InvalidDataException;
+import com.mpatric.mp3agic.Mp3File;
+import com.mpatric.mp3agic.UnsupportedTagException;
+
 import org.apache.commons.lang3.StringUtils;
-import org.apache.tika.parser.mp3.Mp3Parser;
-import org.apache.tika.exception.TikaException;
-import org.apache.tika.metadata.Metadata;
-import org.apache.tika.parser.ParseContext;
-import org.apache.tika.parser.Parser;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
-
-import javafx.scene.media.Media;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Data
+@RequiredArgsConstructor
 public class Entry {
 
     private final File file;
-    private final Media media;
-    private final Metadata metadata;
+    private String artist;
+    private String album;
+    private String title;
 
-    public Entry(final File file) throws IOException, SAXException, TikaException {
-        this.file = file;
-        this.media = new Media(file.toURI().toString());
-        this.metadata = new Metadata();
-        try (final InputStream input = new FileInputStream(file)) {
-            final ContentHandler handler = new DefaultHandler();
-            final Parser parser = new Mp3Parser();
-            final ParseContext context = new ParseContext();
-            parser.parse(input, handler, metadata, context);
+    private void loadMp3Tags() {
+        try {
+            final Mp3File mp3 = new Mp3File(file);
+            if (mp3.hasId3v1Tag()) {
+                final ID3v1 tag = mp3.getId3v1Tag();
+                this.artist = tag.getArtist();
+                this.album = tag.getAlbum();
+                this.title = tag.getTitle();
+            } else if (mp3.hasId3v2Tag()) {
+                final ID3v2 tag = mp3.getId3v2Tag();
+                this.artist = tag.getArtist();
+                this.album = tag.getAlbum();
+                this.title = tag.getTitle();
+            } else {
+                log.error("no id3v1 or id3v2 tags found in {]", file.getName());
+                setDefaults();
+            }
+        } catch (final Exception e) {
+            log.error("unable to read mp3 tags from {}: {}", file.getName(), e.getMessage());
+            setDefaults();
         }
     }
 
+    private void setDefaults() {
+        this.artist = "unknown artist";
+        this.album = "unknown album";
+        this.title = file.getName();
+    }
+
     public String getArtist() {
-        return Optional.ofNullable(metadata.get("artists")).orElse(StringUtils.EMPTY);
+        if (StringUtils.isEmpty(artist)) {
+            loadMp3Tags();
+        }
+        return artist;
     }
 
     public String getAlbum() {
-        return Optional.ofNullable(metadata.get("album")).orElse(StringUtils.EMPTY);
+        if (StringUtils.isEmpty(artist)) {
+            loadMp3Tags();
+        }
+        return album;
     }
 
     public String getTitle() {
-        return Optional.ofNullable(metadata.get("title")).orElse(StringUtils.EMPTY);
+        if (StringUtils.isEmpty(artist)) {
+            loadMp3Tags();
+        }
+        return title;
     }
 
     public static Comparator<Entry> orderByArtistAblumName() {
