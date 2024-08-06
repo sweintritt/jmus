@@ -10,7 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Triple;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,8 +23,8 @@ public class Application {
     private static final String STATUS = "[ jmus %s | %d files | vol:%d | %s ] (q)uit, (s)top, (p)lay, (n)ext, (+)volume, (-)volume";
 
     private final Random random = new Random();
-    private final List<Triple<String, String, String>> titlelist = new LinkedList<>();
-    private final List<Entry> entries = new ArrayList<>();
+    private final List<Entry> entries = new LinkedList<>();
+    private Entry entry;
     private State state = State.SEARCHING;
     private String version;
     /**
@@ -36,7 +35,6 @@ public class Application {
      * Root directory to scan for music
      */
     private File directory;
-    private int index = 0;
     private MediaPlayer player;
     private Media media;
     private boolean running;
@@ -49,7 +47,8 @@ public class Application {
             loadFiles(directory);
             log.info("found {} files", entries.size());
             state = State.STOPPED;
-            Collections.shuffle(entries);
+            // TODO Make the comparator null safe
+            //Collections.sort(entries, Entry.orderByArtistAblumName());
 
             running = true;
             next();
@@ -66,7 +65,8 @@ public class Application {
     }
 
     private void loadFiles(final File dir) {
-        log.info("searching {}", dir.getName());
+        log.info("seimport org.xml.sax.helpers.DefaultHandler;\n" + //
+                        "arching {}", dir.getName());
         final File[] files = dir.listFiles();
         if(files != null) {
             for (final File file : files) {
@@ -110,18 +110,14 @@ public class Application {
         Optional.ofNullable(player).ifPresent(MediaPlayer::stop);
         Optional.ofNullable(player).ifPresent(MediaPlayer::dispose);
         try {
-            final Entry entry = entries.get(getNextIndex());
+            entry = getNextEntry();
             log.info("playing {}", entry.getFile().getName());
-            final Media media = new Media(entry.getFile().toURI().toString());
-            player = new MediaPlayer(media);
+            player = new MediaPlayer(new Media(entry.getFile().toURI().toString()));
             player.setOnEndOfMedia(this::setOnEndOfMedia);
             player.setVolume(0.5);
             play();
             state = State.PLAYING;
-            player.setOnReady(() -> {
-                addMessage(entry);
-                draw();
-            });
+            player.setOnReady(this::draw);
         } catch (final MediaException e) {
             if (!StringUtils.equals(e.getMessage(), "Unrecognized file signature!")) {
                 log.error("Error during playback: {} ", e.getMessage(), e);
@@ -131,12 +127,11 @@ public class Application {
         }
     }
 
-    public int getNextIndex() {
-        if (index > entries.size()) {
-            index = 0;
-        }
-
-        return index++;
+    public Entry getNextEntry() {
+        return entries.stream()
+            .skip(random.nextInt(entries.size()))
+            .findFirst()
+            .orElse(null);
     }
 
     public void setOnEndOfMedia() {
@@ -202,36 +197,35 @@ public class Application {
         final LibC.Winsize winsize = getWindowsize();
         System.out.print("\033[2J");
         System.out.print("\033[H");
-        final int start = Math.max(0, titlelist.size() - winsize.ws_row);
 
-        for (int i = 0; i < Math.max(0, winsize.ws_row - titlelist.size()); ++i) {
-            System.out.print("\r\n");
-        }
-
-        while (titlelist.size() > winsize.ws_row) {
-            this.titlelist.removeFirst();
-        }
-
+        final int index = entries.indexOf(entry);
+        final int pos = Math.floorDiv(winsize.ws_row, 2);
         final int columnLength = Math.max(0, winsize.ws_col / 3);
-        for (int i = start; i < titlelist.size(); ++i) {
-            String fullTitle = getFullTitle(titlelist.get(i), columnLength);
-            if (StringUtils.isBlank(fullTitle)) {
-                log.warn("Message is empty: {}", titlelist.get(i));
-            }
-            log.debug("length full title: {}, column width: {}, window columns: {}", fullTitle.length(), columnLength, winsize.ws_col);
-            if (i == titlelist.size() - 1) {
-                fullTitle = "\033[1;44;1;37m" + fullTitle + "\033[0m";
-            }
 
-            System.out.print(fullTitle + "\r\n");
+        for (int i = Math.max(0, index - pos); i < Math.max(0, index + pos - 1); ++i) {
+            final Entry current = entries.get(i);
+
+            if (current == null) {
+                System.out.print("\r\n");
+            } else if (i == index) {
+                final String fullTitle = "\033[1;44;1;37m" + getFullTitle(entry, columnLength) + "\033[0m";
+                System.out.print(fullTitle + "\r\n");
+            } else {
+                System.out.print(getFullTitle(entry, columnLength) + "\r\n");
+            }
         }
 
+        // Print status line
+        System.out.print("\033[7m" + getStatusLine(winsize.ws_col) + "\033[0m");
+    }
+
+    public String getStatusLine(final int length) {
         final String status = String.format(STATUS,
                 getVersion(),
                 entries.size(),
                 (int) (Optional.ofNullable(player).map(MediaPlayer::getVolume).orElse(0d) * 100.0),
                 state.toString().toLowerCase());
-        System.out.print("\033[7m" + status + " ".repeat(Math.max(0, winsize.ws_col - status.length())) + "\033[0m");
+        return status + " ".repeat(Math.max(0, length - status.length()));
     }
 
     public String getVersion() {
@@ -246,17 +240,13 @@ public class Application {
         return version;
     }
 
-    public String getFullTitle(final Triple<String, String, String> entry, final int columnLength) {
-        return fitToWidth(entry.getLeft(), columnLength) + fitToWidth(entry.getMiddle(), columnLength) + fitToWidth(entry.getRight(), columnLength);
+    public String getFullTitle(final Entry entry, final int columnLength) {
+        return fitToWidth(entry.getArtist(), columnLength) + fitToWidth(entry.getAlbum(), columnLength) + fitToWidth(entry.getTitle(), columnLength);
     }
 
     public String fitToWidth(final String message, final int width) {
         final String msg = StringUtils.trim(message);
         return StringUtils.abbreviate(StringUtils.trim(msg), "... ", width) 
             + StringUtils.SPACE.repeat(Math.max(0, width - StringUtils.length(msg)));
-    }
-
-    public void addMessage(final Entry e) {
-        this.titlelist.add(Triple.of(e.getArtist(), e.getAlbum(), e.getTitle()));
     }
 }
