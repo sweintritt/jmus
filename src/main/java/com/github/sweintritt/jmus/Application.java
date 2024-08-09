@@ -14,6 +14,7 @@ import org.apache.commons.lang3.StringUtils;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Getter
@@ -45,15 +46,19 @@ public class Application {
             //draw();
             log.info("scanning for files");
             loadFiles(directory);
-            log.info("found {} files", entries.size());
-            state = State.STOPPED;
-            // TODO Make the comparator null safe
             //Collections.sort(entries, Entry.orderByArtistAblumName());
 
+            // Load Mp3 id tags async
+            CompletableFuture.runAsync(() -> {
+                entries.forEach(Entry::loadMp3Tags);
+            });
+
+            log.info("found {} files", entries.size());
+            state = State.STOPPED;
+            
             running = true;
             next();
             while (running) {
-                draw();
                 final int key = System.in.read();
                 handleKey(key);
             }
@@ -65,8 +70,7 @@ public class Application {
     }
 
     private void loadFiles(final File dir) {
-        log.info("seimport org.xml.sax.helpers.DefaultHandler;\n" + //
-                        "arching {}", dir.getName());
+        log.info("searching {}", dir.getName());
         final File[] files = dir.listFiles();
         if(files != null) {
             for (final File file : files) {
@@ -113,7 +117,7 @@ public class Application {
             entry = getNextEntry();
             log.info("playing {}", entry.getFile().getName());
             player = new MediaPlayer(new Media(entry.getFile().toURI().toString()));
-            player.setOnEndOfMedia(this::setOnEndOfMedia);
+            player.setOnEndOfMedia(this::next);
             player.setVolume(0.5);
             play();
             state = State.PLAYING;
@@ -132,11 +136,6 @@ public class Application {
             .skip(random.nextInt(entries.size()))
             .findFirst()
             .orElse(null);
-    }
-
-    public void setOnEndOfMedia() {
-        next();
-        draw();
     }
 
     public void stop() {
@@ -195,23 +194,27 @@ public class Application {
 
     public void draw() {
         final LibC.Winsize winsize = getWindowsize();
+        // clear screen
         System.out.print("\033[2J");
         System.out.print("\033[H");
 
+        // TODO handle the empty list while still loading entries
         final int index = entries.indexOf(entry);
         final int pos = Math.floorDiv(winsize.ws_row, 2);
         final int columnLength = Math.max(0, winsize.ws_col / 3);
+        log.debug("rows: {}, index: {}, pos: {}", winsize.ws_row, index, pos);
 
-        for (int i = Math.max(0, index - pos); i < Math.max(0, index + pos - 1); ++i) {
+        for (int i = Math.max(0, index - pos); i < Math.max(0, index + pos); ++i) {
             final Entry current = entries.get(i);
 
             if (current == null) {
+                log.debug("no entry at {}", i);
                 System.out.print("\r\n");
             } else if (i == index) {
-                final String fullTitle = "\033[1;44;1;37m" + getFullTitle(entry, columnLength) + "\033[0m";
+                final String fullTitle = "\033[1;44;1;37m" + getFullTitle(current, columnLength) + "\033[0m";
                 System.out.print(fullTitle + "\r\n");
             } else {
-                System.out.print(getFullTitle(entry, columnLength) + "\r\n");
+                System.out.print(getFullTitle(current, columnLength) + "\r\n");
             }
         }
 

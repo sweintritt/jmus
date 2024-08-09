@@ -19,37 +19,46 @@ import lombok.extern.slf4j.Slf4j;
 public class Entry {
 
     private final File file;
-    private String artist;
-    private String album;
-    private String title;
+    private String artist = StringUtils.EMPTY;
+    private String album = StringUtils.EMPTY;
+    private String title = StringUtils.EMPTY;
 
-    private void loadMp3Tags() {
+    public void loadMp3Tags() {
         try {
             final Mp3File mp3 = new Mp3File(file);
             if (mp3.hasId3v1Tag()) {
                 final ID3v1 tag = mp3.getId3v1Tag();
-                this.artist = tag.getArtist();
-                this.album = tag.getAlbum();
-                this.title = tag.getTitle();
+                this.artist = StringUtils.trimToEmpty(tag.getArtist());
+                this.album = StringUtils.trimToEmpty(tag.getAlbum());
+                this.title = StringUtils.trimToEmpty(tag.getTitle());
             } else if (mp3.hasId3v2Tag()) {
                 final ID3v2 tag = mp3.getId3v2Tag();
-                this.artist = tag.getArtist();
-                this.album = tag.getAlbum();
-                this.title = tag.getTitle();
+                this.artist = StringUtils.trimToEmpty(tag.getArtist());
+                this.album = StringUtils.trimToEmpty(tag.getAlbum());
+                this.title = StringUtils.trimToEmpty(tag.getTitle());
             } else {
                 log.error("no id3v1 or id3v2 tags found in {]", file.getName());
-                setDefaults();
             }
+
+            checkAndSetDefaults();
         } catch (final Exception e) {
             log.error("unable to read mp3 tags from {}: {}", file.getName(), e.getMessage());
-            setDefaults();
+            checkAndSetDefaults();
         }
     }
 
-    private void setDefaults() {
-        this.artist = "unknown artist";
-        this.album = "unknown album";
-        this.title = file.getName();
+    private void checkAndSetDefaults() {
+        if (StringUtils.isBlank(this.artist)) {
+            this.artist = "unknown artist";
+        }
+
+        if (StringUtils.isBlank(this.album)) {
+            this.album = "unknown album";
+        }
+
+        if (StringUtils.isBlank(this.title)) {
+            this.title = file.getName();
+        }
     }
 
     public String getArtist() {
