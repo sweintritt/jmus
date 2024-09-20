@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Long title infos are abbreviated with '...'
 * Status bar now shows the correct version
 
+### Changed
+
+* Screen is cleared on exit
+
 ## [0.1.0] - 2024-07-11
 
 * Initial version.

@@ -43,10 +43,10 @@ public class Application {
     public void run() {
         try {
             enableRawMode();
-            //draw();
+            // draw();
             log.info("scanning for files");
             loadFiles(directory);
-            //Collections.sort(entries, Entry.orderByArtistAblumName());
+            // Collections.sort(entries, Entry.orderByArtistAblumName());
 
             // Load Mp3 id tags async
             CompletableFuture.runAsync(() -> {
@@ -55,7 +55,7 @@ public class Application {
 
             log.info("found {} files", entries.size());
             state = State.STOPPED;
-            
+
             running = true;
             next();
             while (running) {
@@ -72,7 +72,7 @@ public class Application {
     private void loadFiles(final File dir) {
         log.info("searching {}", dir.getName());
         final File[] files = dir.listFiles();
-        if(files != null) {
+        if (files != null) {
             for (final File file : files) {
                 // For now just mp3s is fine
                 if (file.isFile() && StringUtils.endsWithIgnoreCase(file.getName(), ".mp3")) {
@@ -133,9 +133,9 @@ public class Application {
 
     public Entry getNextEntry() {
         return entries.stream()
-            .skip(random.nextInt(entries.size()))
-            .findFirst()
-            .orElse(null);
+                .skip(random.nextInt(entries.size()))
+                .findFirst()
+                .orElse(null);
     }
 
     public void stop() {
@@ -181,7 +181,10 @@ public class Application {
             throw new IllegalStateException("error calling libc.tcsetattr rc: " + rc);
         }
 
-        Runtime.getRuntime().addShutdownHook(new Thread(this::disableRawMode));
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            disableRawMode();
+            clearScreen();
+        }));
     }
 
     public void disableRawMode() {
@@ -192,29 +195,38 @@ public class Application {
         }
     }
 
-    public void draw() {
-        final LibC.Winsize winsize = getWindowsize();
-        // clear screen
+    public void clearScreen() {
+        log.debug("clear screen");
         System.out.print("\033[2J");
         System.out.print("\033[H");
+    }
 
-        // TODO handle the empty list while still loading entries
-        final int index = entries.indexOf(entry);
-        final int pos = Math.floorDiv(winsize.ws_row, 2);
-        final int columnLength = Math.max(0, winsize.ws_col / 3);
-        log.debug("rows: {}, index: {}, pos: {}", winsize.ws_row, index, pos);
+    public void draw() {
+        final LibC.Winsize winsize = getWindowsize();
+        clearScreen();
 
-        for (int i = Math.max(0, index - pos); i < Math.max(0, index + pos); ++i) {
-            final Entry current = entries.get(i);
+        if (entries.isEmpty()) {
+            for (int i = 0; i < winsize.ws_row; ++i) {
+                System.out.println("\r\n");
+            }
+        } else {
+            final int index = entries.indexOf(entry);
+            final int pos = Math.floorDiv(winsize.ws_row, 2);
+            final int columnLength = Math.max(0, winsize.ws_col / 3);
+            log.debug("rows: {}, index: {}, pos: {}", winsize.ws_row, index, pos);
+            // TODO Statusline is not displayed at the bottom of the screen if there are less songs than rows
+            for (int i = Math.max(0, index - pos); i < Math.max(entries.size(), index + pos); ++i) {
+                final Entry current = (i > entries.size() - 1) ? null : entries.get(i);
 
-            if (current == null) {
-                log.debug("no entry at {}", i);
-                System.out.print("\r\n");
-            } else if (i == index) {
-                final String fullTitle = "\033[1;44;1;37m" + getFullTitle(current, columnLength) + "\033[0m";
-                System.out.print(fullTitle + "\r\n");
-            } else {
-                System.out.print(getFullTitle(current, columnLength) + "\r\n");
+                if (current == null) {
+                    log.debug("no entry at {}", i);
+                    System.out.print("\r\n");
+                } else if (i == index) {
+                    final String fullTitle = "\033[1;44;1;37m" + getFullTitle(current, columnLength) + "\033[0m";
+                    System.out.print(fullTitle + "\r\n");
+                } else {
+                    System.out.print(getFullTitle(current, columnLength) + "\r\n");
+                }
             }
         }
 
@@ -234,7 +246,9 @@ public class Application {
     public String getVersion() {
         if (version == null) {
             try {
-                version = "v" + new String(IOUtils.toByteArray(this.getClass().getClassLoader().getResourceAsStream("version.txt")));
+                version = "v"
+                        + new String(IOUtils
+                                .toByteArray(this.getClass().getClassLoader().getResourceAsStream("version.txt")));
             } catch (final IOException e) {
                 log.error("Unable to read version: {}", e.getMessage(), e);
                 version = StringUtils.EMPTY;
@@ -244,12 +258,13 @@ public class Application {
     }
 
     public String getFullTitle(final Entry entry, final int columnLength) {
-        return fitToWidth(entry.getArtist(), columnLength) + fitToWidth(entry.getAlbum(), columnLength) + fitToWidth(entry.getTitle(), columnLength);
+        return fitToWidth(entry.getArtist(), columnLength) + fitToWidth(entry.getAlbum(), columnLength)
+                + fitToWidth(entry.getTitle(), columnLength);
     }
 
     public String fitToWidth(final String message, final int width) {
         final String msg = StringUtils.trim(message);
-        return StringUtils.abbreviate(StringUtils.trim(msg), "... ", width) 
-            + StringUtils.SPACE.repeat(Math.max(0, width - StringUtils.length(msg)));
+        return StringUtils.abbreviate(StringUtils.trim(msg), "... ", width)
+                + StringUtils.SPACE.repeat(Math.max(0, width - StringUtils.length(msg)));
     }
 }
