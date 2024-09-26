@@ -43,15 +43,12 @@ public class Application {
     public void run() {
         try {
             enableRawMode();
-            // draw();
             log.info("scanning for files");
             loadFiles(directory);
-            // Collections.sort(entries, Entry.orderByArtistAblumName());
 
             // Load Mp3 id tags async
-            CompletableFuture.runAsync(() -> {
-                entries.forEach(Entry::loadMp3Tags);
-            });
+            // TODO parallel with more threads
+            CompletableFuture.runAsync(() -> entries.forEach(Entry::loadMp3Tags));
 
             log.info("found {} files", entries.size());
             state = State.STOPPED;
@@ -100,9 +97,11 @@ public class Application {
                 break;
             case '+':
                 player.setVolume(Math.min(player.getVolume() + 0.1, 1.0));
+                draw();
                 break;
             case '-':
                 player.setVolume(Math.max(player.getVolume() - 0.1, 0.0));
+                draw();
                 break;
             default:
                 break;
@@ -211,11 +210,17 @@ public class Application {
             }
         } else {
             final int index = entries.indexOf(entry);
-            final int pos = Math.floorDiv(winsize.ws_row, 2);
+            // Try to position the current title in the middle of the screen
+            final int half = Math.floorDiv(winsize.ws_row, 2);
+
+            // TODO rows: 29, half: 14, index: 115, startIndex: 114, entries: 116
+            int startIndex = Math.max(0, index - half);
+            if (index + half > entries.size()) {
+                startIndex += winsize.ws_row - (index + half) - entries.size();
+            }
             final int columnLength = Math.max(0, winsize.ws_col / 3);
-            log.debug("rows: {}, index: {}, pos: {}", winsize.ws_row, index, pos);
-            // TODO Statusline is not displayed at the bottom of the screen if there are less songs than rows
-            for (int i = Math.max(0, index - pos); i < Math.max(entries.size(), index + pos); ++i) {
+            log.debug("rows: {}, half: {}, index: {}, startIndex: {}, entries: {}", winsize.ws_row, half, index, startIndex, entries.size());
+            for (int i = startIndex; i < startIndex + winsize.ws_row; ++i) {
                 final Entry current = (i > entries.size() - 1) ? null : entries.get(i);
 
                 if (current == null) {
