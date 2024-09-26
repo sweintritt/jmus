@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+* jmus does not longer show the last played songs, but the song list.
+
 ### Fixed
 
 * Long title infos are abbreviated with '...'

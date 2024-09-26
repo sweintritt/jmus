@@ -213,7 +213,6 @@ public class Application {
             // Try to position the current title in the middle of the screen
             final int half = Math.floorDiv(winsize.ws_row, 2);
 
-            // TODO rows: 29, half: 14, index: 115, startIndex: 114, entries: 116
             int startIndex = Math.max(0, index - half);
             if (index + half > entries.size()) {
                 startIndex += winsize.ws_row - (index + half) - entries.size();
