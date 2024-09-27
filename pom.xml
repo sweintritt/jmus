@@ -38,18 +38,19 @@
         <main.class>com.github.sweintritt.jmus.Main</main.class>
 
         <!-- Library versions -->
-        <version.javafx>21.0.1</version.javafx>
-        <version.commons-cli>1.7.0</version.commons-cli>
+        <version.javafx>21.0.4</version.javafx>
+        <version.commons-cli>1.8.0</version.commons-cli>
         <version.commons.io>2.16.1</version.commons.io>
-        <version.commons-lang>3.14.0</version.commons-lang>
+        <version.commons-lang>3.15.0</version.commons-lang>
         <version.commons-collections>4.4</version.commons-collections>
         <version.log4j2>2.23.1</version.log4j2>
         <version.lombok>1.18.32</version.lombok>
         <version.slf4j>1.7.36</version.slf4j>
         <version.jna>5.14.0</version.jna>
-        <version.assertj>3.26.0</version.assertj>
+        <version.assertj>3.26.3</version.assertj>
         <version.mockito>5.12.0</version.mockito>
         <version.junit>5.10.3</version.junit>
+        <version.mp3agic>0.9.1</version.mp3agic>
 
         <!-- Plugin Versions -->
         <version.maven-compiler-plugin>3.13.0</version.maven-compiler-plugin>
@@ -89,12 +90,6 @@
             <artifactId>commons-collections4</artifactId>
             <version>${version.commons-collections}</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/org.openjfx/javafx-base -->
-        <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-base</artifactId>
-            <version>${version.javafx}</version>
-        </dependency>
         <!-- https://mvnrepository.com/artifact/org.openjfx/javafx-media -->
         <dependency>
             <groupId>org.openjfx</groupId>
@@ -125,6 +120,12 @@
             <artifactId>jna</artifactId>
             <version>${version.jna}</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/com.mpatric/mp3agic -->
+        <dependency>
+            <groupId>com.mpatric</groupId>
+            <artifactId>mp3agic</artifactId>
+            <version>${version.mp3agic}</version>
+        </dependency>
         <!-- https://mvnrepository.com/artifact/org.assertj/assertj-core -->
         <dependency>
             <groupId>org.assertj</groupId>
@@ -154,7 +155,7 @@
                 <directory>src/main/resources</directory>
                 <filtering>true</filtering>
                 <includes>
-                    <include>version.txt</include>
+                    <include>*</include>
                 </includes>
             </resource>
         </resources>
@@ -191,32 +192,32 @@
                     </archive>
                 </configuration>
             </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
                 <version>${version.maven-shade-plugin}</version>
                 <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <filters>
-                                <filter>
-                                    <artifact>*:*</artifact>
-                                    <excludes>
-                                        <!--
-                                       <exclude>*.xml</exclude>
-                                       <exclude>*.xsd</exclude>
-                                       -->
-                                    </excludes>
-                                </filter>
-                            </filters>
-                        </configuration>
-                    </execution>
+                   <execution>
+                      <phase>package</phase>
+                      <goals>
+                         <goal>shade</goal>
+                      </goals>
+                      <configuration>
+                         <filters>
+                            <filter>
+                               <artifact>*:*</artifact>
+                               <excludes>
+                                  <!--exclude>META-INF/*.SF</exclude>
+                                  <exclude>META-INF/*.DSA</exclude>
+                                  <exclude>META-INF/*.RSA</exclude-->
+                               </excludes>
+                            </filter>
+                         </filters>
+                      </configuration>
+                   </execution>
                 </executions>
-            </plugin>
+             </plugin>
         </plugins>
     </build>
 </project>
