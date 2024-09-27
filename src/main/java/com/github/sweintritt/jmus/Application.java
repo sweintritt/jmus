@@ -62,7 +62,9 @@ public class Application {
         } catch (final Exception e) {
             quit();
             log.error(e.getMessage(), e);
+            disableRawMode();
             System.err.println("Error: " + e.getMessage());
+            return;
         }
     }
 
