@@ -29,6 +29,7 @@ public class Application {
     private Entry entry;
     private State state = State.SEARCHING;
     private String version;
+    private double volume = 0.5;
     /**
      * Backup of the original values
      */
@@ -101,16 +102,20 @@ public class Application {
                 quit();
                 break;
             case '+':
-                player.setVolume(Math.min(player.getVolume() + 0.1, 1.0));
-                draw();
+                setVolume(Math.min(player.getVolume() + 0.1, 1.0));
                 break;
             case '-':
-                player.setVolume(Math.max(player.getVolume() - 0.1, 0.0));
-                draw();
+                setVolume(Math.max(player.getVolume() - 0.1, 0.0));
                 break;
             default:
                 break;
         }
+    }
+
+    public void setVolume(final double volume) {
+        this.volume = volume;
+        player.setVolume(volume);
+        draw();
     }
 
     public void next() {
@@ -136,8 +141,7 @@ public class Application {
             log.info("playing {}", entry.getFile().getName());
             player = new MediaPlayer(new Media(entry.getFile().toURI().toString()));
             player.setOnEndOfMedia(this::next);
-            // TODO this will reset the volume every time a new song is played
-            player.setVolume(0.5);
+            player.setVolume(volume);
             play();
             state = State.PLAYING;
             player.setOnReady(this::draw);
