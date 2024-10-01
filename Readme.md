@@ -29,6 +29,7 @@ executed by pressing the button in brackets.
 * `q` - Quit jmus
 * `s` - Stop playing
 * `p` - Start playing
+* `b` - Play the previous song
 * `n` - Play the next song
 * `+` - Increase the volume
 * `-` - Decrease the columne

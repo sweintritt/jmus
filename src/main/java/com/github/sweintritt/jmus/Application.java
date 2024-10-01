@@ -21,10 +21,11 @@ import java.util.concurrent.CompletableFuture;
 @Setter
 public class Application {
 
-    private static final String STATUS = "[ jmus %s | %d files | vol:%d | %s ] (q)uit, (s)top, (p)lay, (n)ext, (+)volume, (-)volume";
+    private static final String STATUS = "[ jmus %s | %d files | vol:%d | %s ] (q)uit, (s)top, (p)lay, (b)ack, (n)ext, (+)volume, (-)volume";
 
     private final Random random = new Random();
     private final List<Entry> entries = new LinkedList<>();
+    private final Stack<Integer> indexStack = new Stack<>();
     private Entry entry;
     private State state = State.SEARCHING;
     private String version;
@@ -64,7 +65,6 @@ public class Application {
             log.error(e.getMessage(), e);
             disableRawMode();
             System.err.println("Error: " + e.getMessage());
-            return;
         }
     }
 
@@ -87,6 +87,9 @@ public class Application {
         switch (key) {
             case 'n':
                 next();
+                break;
+            case 'b':
+                back();
                 break;
             case 'p':
                 play();
@@ -111,14 +114,29 @@ public class Application {
     }
 
     public void next() {
-        log.debug("selecting next file");
+        play(random.nextInt(entries.size()));
+   }
+
+    /**
+     * Jump back one track in the list
+     */
+    public void back() {
+       if (indexStack.size() > 1) {
+            indexStack.pop();
+            play(indexStack.pop());
+       }
+    }
+
+    public void play(final int index) {
+        indexStack.push(index);
         Optional.ofNullable(player).ifPresent(MediaPlayer::stop);
         Optional.ofNullable(player).ifPresent(MediaPlayer::dispose);
         try {
-            entry = getNextEntry();
+            entry = entries.get(index);
             log.info("playing {}", entry.getFile().getName());
             player = new MediaPlayer(new Media(entry.getFile().toURI().toString()));
             player.setOnEndOfMedia(this::next);
+            // TODO this will reset the volume every time a new song is played
             player.setVolume(0.5);
             play();
             state = State.PLAYING;
@@ -129,14 +147,7 @@ public class Application {
             }
         } catch (final Exception e) {
             log.error("Error during playback: {} ", e.getMessage(), e);
-        }
-    }
-
-    public Entry getNextEntry() {
-        return entries.stream()
-                .skip(random.nextInt(entries.size()))
-                .findFirst()
-                .orElse(null);
+        }      
     }
 
     public void stop() {
@@ -222,6 +233,7 @@ public class Application {
             final int columnLength = Math.max(0, winsize.ws_col / 3);
             log.debug("rows: {}, half: {}, index: {}, startIndex: {}, entries: {}", winsize.ws_row, half, index, startIndex, entries.size());
             for (int i = startIndex; i < startIndex + winsize.ws_row; ++i) {
+                // FIXME: Sometimes a IndexOutOfBoundsException is thrown here
                 final Entry current = (i > entries.size() - 1) ? null : entries.get(i);
 
                 if (current == null) {
