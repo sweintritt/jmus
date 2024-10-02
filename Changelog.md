@@ -17,13 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-* Long title infos are abbreviated with '...'
-* Status bar now shows the correct version
-* Volume is no longer reset when playing the next song
+* Long title infos are abbreviated with '...'.
+* Status bar now shows the correct version.
+* Volume is no longer reset when playing the next song.
+* Display error, when reaching the end of the song list.
 
 ### Changed
 
-* Screen is cleared on exit
+* Screen is cleared on exit.
 
 ## [0.1.0] - 2024-07-11
 

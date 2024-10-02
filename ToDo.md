@@ -8,5 +8,3 @@ ToDo
 * Implement (f)ind. Filter the song list based on user input and select songs 
   from that list.
 * Write unittests and make the app more testable
-* Sometimes no metadata are shown while playing until you skip to the next song
-* Sometimes the app crashes
