@@ -21,13 +21,15 @@ import java.util.concurrent.CompletableFuture;
 @Setter
 public class Application {
 
-    private static final String STATUS = "[ jmus %s | %d files | vol:%d | %s ] (q)uit, (s)top, (p)lay, (n)ext, (+)volume, (-)volume";
+    private static final String STATUS = "[ jmus %s | %d files | vol:%d | %s ] (q)uit, (s)top, (p)lay, (b)ack, (n)ext, (+)volume, (-)volume";
 
     private final Random random = new Random();
     private final List<Entry> entries = new LinkedList<>();
+    private final Deque<Integer> indexStack = new LinkedList<>();
     private Entry entry;
     private State state = State.SEARCHING;
     private String version;
+    private double volume = 0.5;
     /**
      * Backup of the original values
      */
@@ -60,11 +62,7 @@ public class Application {
                 handleKey(key);
             }
         } catch (final Exception e) {
-            quit();
-            log.error(e.getMessage(), e);
-            disableRawMode();
-            System.err.println("Error: " + e.getMessage());
-            return;
+            quit(e);
         }
     }
 
@@ -88,6 +86,9 @@ public class Application {
             case 'n':
                 next();
                 break;
+            case 'b':
+                back();
+                break;
             case 'p':
                 play();
                 break;
@@ -98,28 +99,46 @@ public class Application {
                 quit();
                 break;
             case '+':
-                player.setVolume(Math.min(player.getVolume() + 0.1, 1.0));
-                draw();
+                setVolume(Math.min(player.getVolume() + 0.1, 1.0));
                 break;
             case '-':
-                player.setVolume(Math.max(player.getVolume() - 0.1, 0.0));
-                draw();
+                setVolume(Math.max(player.getVolume() - 0.1, 0.0));
                 break;
             default:
                 break;
         }
     }
 
+    public void setVolume(final double volume) {
+        this.volume = volume;
+        player.setVolume(volume);
+        draw();
+    }
+
     public void next() {
-        log.debug("selecting next file");
+        play(random.nextInt(entries.size()));
+    }
+
+    /**
+     * Jump back one track in the list
+     */
+    public void back() {
+        if (indexStack.size() > 1) {
+            indexStack.pop();
+            play(indexStack.pop());
+        }
+    }
+
+    public void play(final int index) {
+        indexStack.push(index);
         Optional.ofNullable(player).ifPresent(MediaPlayer::stop);
         Optional.ofNullable(player).ifPresent(MediaPlayer::dispose);
         try {
-            entry = getNextEntry();
+            entry = entries.get(index);
             log.info("playing {}", entry.getFile().getName());
             player = new MediaPlayer(new Media(entry.getFile().toURI().toString()));
             player.setOnEndOfMedia(this::next);
-            player.setVolume(0.5);
+            player.setVolume(volume);
             play();
             state = State.PLAYING;
             player.setOnReady(this::draw);
@@ -132,13 +151,6 @@ public class Application {
         }
     }
 
-    public Entry getNextEntry() {
-        return entries.stream()
-                .skip(random.nextInt(entries.size()))
-                .findFirst()
-                .orElse(null);
-    }
-
     public void stop() {
         Optional.ofNullable(player).ifPresent(MediaPlayer::pause);
         state = State.STOPPED;
@@ -149,11 +161,20 @@ public class Application {
         state = State.PLAYING;
     }
 
-    public void quit() {
-        disableRawMode();
+    public void quit(final Exception e) {
         setRunning(false);
         Optional.ofNullable(player).ifPresent(MediaPlayer::stop);
+        disableRawMode();
+        clearScreen();
+        if (e != null) {
+            log.error(e.getMessage(), e);
+            System.err.println("Error: " + e.getMessage());
+        }
         Platform.exit();
+    }
+
+    public void quit() {
+        quit(null);
     }
 
     public LibC.Winsize getWindowsize() {
@@ -203,41 +224,46 @@ public class Application {
     }
 
     public void draw() {
-        final LibC.Winsize winsize = getWindowsize();
-        clearScreen();
+        try {
+            final LibC.Winsize winsize = getWindowsize();
+            clearScreen();
 
-        if (entries.isEmpty()) {
-            for (int i = 0; i < winsize.ws_row; ++i) {
-                System.out.println("\r\n");
-            }
-        } else {
-            final int index = entries.indexOf(entry);
-            // Try to position the current title in the middle of the screen
-            final int half = Math.floorDiv(winsize.ws_row, 2);
+            if (entries.isEmpty()) {
+                for (int i = 0; i < winsize.ws_row; ++i) {
+                    System.out.println("\r\n");
+                }
+            } else {
+                final int index = entries.indexOf(entry);
+                // Try to position the current title in the middle of the screen
+                final int half = Math.floorDiv(winsize.ws_row, 2);
+                // rows: 38, half: 19, enttries: 89, index: 74
+                int startIndex = Math.max(0, index - half);
+                if (index + half > entries.size()) {
+                    startIndex -= (index + half) - entries.size();
+                }
+                final int columnLength = Math.max(0, winsize.ws_col / 3);
+                log.debug("rows: {}, half: {}, index: {}, startIndex: {}, entries: {}", winsize.ws_row, half, index,
+                        startIndex, entries.size());
+                for (int i = startIndex; i < startIndex + winsize.ws_row; ++i) {
+                    final Entry current = (i > entries.size() - 1) ? null : entries.get(i);
 
-            int startIndex = Math.max(0, index - half);
-            if (index + half > entries.size()) {
-                startIndex += winsize.ws_row - (index + half) - entries.size();
-            }
-            final int columnLength = Math.max(0, winsize.ws_col / 3);
-            log.debug("rows: {}, half: {}, index: {}, startIndex: {}, entries: {}", winsize.ws_row, half, index, startIndex, entries.size());
-            for (int i = startIndex; i < startIndex + winsize.ws_row; ++i) {
-                final Entry current = (i > entries.size() - 1) ? null : entries.get(i);
-
-                if (current == null) {
-                    log.debug("no entry at {}", i);
-                    System.out.print("\r\n");
-                } else if (i == index) {
-                    final String fullTitle = "\033[1;44;1;37m" + getFullTitle(current, columnLength) + "\033[0m";
-                    System.out.print(fullTitle + "\r\n");
-                } else {
-                    System.out.print(getFullTitle(current, columnLength) + "\r\n");
+                    if (current == null) {
+                        log.debug("no entry at {}", i);
+                        System.out.print("\r\n");
+                    } else if (i == index) {
+                        final String fullTitle = "\033[1;44;1;37m" + getFullTitle(current, columnLength) + "\033[0m";
+                        System.out.print(fullTitle + "\r\n");
+                    } else {
+                        System.out.print(getFullTitle(current, columnLength) + "\r\n");
+                    }
                 }
             }
-        }
 
-        // Print status line
-        System.out.print("\033[7m" + getStatusLine(winsize.ws_col) + "\033[0m");
+            // Print status line
+            System.out.print("\033[7m" + getStatusLine(winsize.ws_col) + "\033[0m");
+        } catch (final Exception e) {
+            quit(e);
+        }
     }
 
     public String getStatusLine(final int length) {
