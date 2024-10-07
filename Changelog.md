@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Status bar now shows the correct version.
 * Volume is no longer reset when playing the next song.
 * Display error, when reaching the end of the song list.
+* Fixed index out of bounds error while drawing
 
 ### Changed
 

@@ -1,6 +1,7 @@
 ToDo
 =====
 
+* Log is not reset on start
 * If the terminal window is too small the app crashes
 * Use Github for Issues?
 * Sort files to switch between random and non-random. Every should get an index,

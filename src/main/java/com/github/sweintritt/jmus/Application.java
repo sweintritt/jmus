@@ -237,10 +237,13 @@ public class Application {
                 // Try to position the current title in the middle of the screen
                 final int half = Math.floorDiv(winsize.ws_row, 2);
                 // rows: 38, half: 19, enttries: 89, index: 74
-                int startIndex = Math.max(0, index - half);
+                int startIndex = index - half;
                 if (index + half > entries.size()) {
                     startIndex -= (index + half) - entries.size();
                 }
+
+                // Ensure that the start index is in bounds of the entry list
+                startIndex = Math.min(entries.size(), Math.max(0, startIndex));
                 final int columnLength = Math.max(0, winsize.ws_col / 3);
                 log.debug("rows: {}, half: {}, index: {}, startIndex: {}, entries: {}", winsize.ws_row, half, index,
                         startIndex, entries.size());
