@@ -1,5 +1,11 @@
 package com.github.sweintritt.jmus;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaException;
@@ -7,14 +13,8 @@ import javafx.scene.media.MediaPlayer;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Getter
@@ -26,6 +26,7 @@ public class Application {
     private final Random random = new Random();
     private final List<Entry> entries = new LinkedList<>();
     private final Deque<Integer> indexStack = new LinkedList<>();
+
     private Entry entry;
     private State state = State.SEARCHING;
     private String version;
@@ -47,9 +48,6 @@ public class Application {
             enableRawMode();
             log.info("scanning for files");
             loadFiles(directory);
-
-            // Load Mp3 id tags async
-            // TODO parallel with more threads
             CompletableFuture.runAsync(() -> entries.forEach(Entry::loadMp3Tags));
 
             log.info("found {} files", entries.size());
@@ -99,10 +97,12 @@ public class Application {
                 quit();
                 break;
             case '+':
-                setVolume(Math.min(player.getVolume() + 0.1, 1.0));
+                setVolume(player.getVolume() + 0.1);
+                draw();
                 break;
             case '-':
-                setVolume(Math.max(player.getVolume() - 0.1, 0.0));
+                setVolume(player.getVolume() - 0.1);
+                draw();
                 break;
             default:
                 break;
@@ -110,9 +110,8 @@ public class Application {
     }
 
     public void setVolume(final double volume) {
-        this.volume = volume;
-        player.setVolume(volume);
-        draw();
+        this.volume = Math.min(1.0, Math.max(0.0, volume));
+        Optional.ofNullable(player).ifPresent(p -> p.setVolume(this.volume));
     }
 
     public void next() {

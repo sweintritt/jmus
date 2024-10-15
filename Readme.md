@@ -1,7 +1,7 @@
 jmus - *J*ava *Mus*ic Player
 =============================
 
-A very simple music player to olay your local music library on shuffel,
+A very simple music player to play your local music library on shuffel,
 in the console using libc (Thanks [Marco](https://www.youtube.com/watch?v=kT4JYQi9w4w)!)
 
 jmus uses *libc* for drawing.

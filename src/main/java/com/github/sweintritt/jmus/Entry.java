@@ -1,17 +1,14 @@
 package com.github.sweintritt.jmus;
 
-import java.io.File;
-import java.util.Comparator;
-
 import com.mpatric.mp3agic.ID3v1;
 import com.mpatric.mp3agic.ID3v2;
 import com.mpatric.mp3agic.Mp3File;
-
-import org.apache.commons.lang3.StringUtils;
-
+import java.io.File;
+import java.util.Comparator;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 
 @Slf4j
 @Data
@@ -37,7 +34,7 @@ public class Entry {
                 this.album = StringUtils.trimToEmpty(tag.getAlbum());
                 this.title = StringUtils.trimToEmpty(tag.getTitle());
             } else {
-                log.error("no id3v1 or id3v2 tags found in {]", file.getName());
+                log.error("no id3v1 or id3v2 tags found in {}", file.getName());
             }
 
             checkAndSetDefaults();
@@ -84,7 +81,7 @@ public class Entry {
 
     public static Comparator<Entry> orderByArtistAblumName() {
         return Comparator.comparing(Entry::getArtist)
-            .thenComparing(Entry::getAlbum)
-            .thenComparing(Entry::getTitle);
+                .thenComparing(Entry::getAlbum)
+                .thenComparing(Entry::getTitle);
     }
 }
