@@ -1,6 +1,5 @@
 # ToDo
 
-* Parallel loading of mp3 tags
 * Some mp3 tags are not loaded. Different keys?
 * Log is not reset on start
 * If the terminal window is too small the app crashes
