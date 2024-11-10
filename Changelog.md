@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-* jmus does not longer show the last played songs, but the song list.
+* jmus does no longer show the last played songs, but the song list.
 
 ### Added
 
@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Volume is no longer reset when playing the next song.
 * Display error, when reaching the end of the song list.
 * Fixed index out of bounds error while drawing
+* Fixed missing artist, album and title infos, if ID3v2 tags and empty v1 tags are present.
 
 ### Changed
 

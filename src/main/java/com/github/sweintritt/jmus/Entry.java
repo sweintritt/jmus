@@ -23,13 +23,13 @@ public class Entry {
     public void loadMp3Tags() {
         try {
             final Mp3File mp3 = new Mp3File(file);
-            if (mp3.hasId3v1Tag()) {
-                final ID3v1 tag = mp3.getId3v1Tag();
+            if (mp3.hasId3v2Tag()) {
+                final ID3v2 tag = mp3.getId3v2Tag();
                 this.artist = StringUtils.trimToEmpty(tag.getArtist());
                 this.album = StringUtils.trimToEmpty(tag.getAlbum());
                 this.title = StringUtils.trimToEmpty(tag.getTitle());
-            } else if (mp3.hasId3v2Tag()) {
-                final ID3v2 tag = mp3.getId3v2Tag();
+            } else if (mp3.hasId3v1Tag()) {
+                final ID3v1 tag = mp3.getId3v1Tag();
                 this.artist = StringUtils.trimToEmpty(tag.getArtist());
                 this.album = StringUtils.trimToEmpty(tag.getAlbum());
                 this.title = StringUtils.trimToEmpty(tag.getTitle());
