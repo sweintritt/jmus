@@ -38,24 +38,24 @@
         <main.class>com.github.sweintritt.jmus.Main</main.class>
 
         <!-- Library versions -->
-        <version.javafx>21.0.4</version.javafx>
+        <version.javafx>21.0.5</version.javafx>
         <version.commons-cli>1.9.0</version.commons-cli>
         <version.commons.io>2.17.0</version.commons.io>
         <version.commons-lang>3.17.0</version.commons-lang>
         <version.commons-collections>4.4</version.commons-collections>
-        <version.log4j2>2.24.0</version.log4j2>
+        <version.log4j2>2.24.1</version.log4j2>
         <version.lombok>1.18.34</version.lombok>
         <version.slf4j>1.7.36</version.slf4j>
         <version.jna>5.15.0</version.jna>
         <version.assertj>3.26.3</version.assertj>
-        <version.mockito>5.14.0</version.mockito>
-        <version.junit>5.11.1</version.junit>
+        <version.mockito>5.14.2</version.mockito>
+        <version.junit>5.11.3</version.junit>
         <version.mp3agic>0.9.1</version.mp3agic>
 
         <!-- Plugin Versions -->
         <version.maven-compiler-plugin>3.13.0</version.maven-compiler-plugin>
-        <version.maven-jar-plugin>3.4.1</version.maven-jar-plugin>
-        <version.maven-shade-plugin>3.5.3</version.maven-shade-plugin>
+        <version.maven-jar-plugin>3.4.2</version.maven-jar-plugin>
+        <version.maven-shade-plugin>3.6.0</version.maven-shade-plugin>
     </properties>
 
     <dependencies>

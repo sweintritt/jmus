@@ -1,14 +1,14 @@
 jmus - *J*ava *Mus*ic Player
 =============================
 
-A very simple music player to play your local music library on shuffel,
+A very simple music player to play your local music library on shuffle,
 in the console using libc (Thanks [Marco](https://www.youtube.com/watch?v=kT4JYQi9w4w)!)
 
 jmus uses *libc* for drawing.
 
 # Play
 
-Provide the folder to your music library on start. jmus willl search all of its subfolders
+Provide the folder to your music library on start. jmus will search all of its subfolders
 for mp3 files. For now only mp3-Files are played.
 
 ```bash
@@ -18,7 +18,7 @@ $ java -jar jmus.jar ~/Music
 After scanning for files, jmus starts playing a random song. While playing jmus reads all
 track infos, this may take a while, depending on the size of your music library.
 
-On the bottom of the screen is the status line. It shows the version, the number of found
+At the bottom of the screen is the status line. It shows the version, the number of found
 files, the current volume, the current state and all available commands. The commands are
 executed by pressing the button in brackets.
 
