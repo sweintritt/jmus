@@ -68,9 +68,9 @@ public class Application {
         if (files != null) {
             for (final File file : files) {
                 // For now just mp3s is fine
-                if (file.isFile() && StringUtils.endsWithIgnoreCase(file.getName(), ".mp3")) {
+                if (file != null && file.isFile() && StringUtils.endsWithIgnoreCase(file.getName(), ".mp3")) {
                     entries.add(new Entry(file));
-                } else if (file.isDirectory()) {
+                } else if (file != null && file.isDirectory()) {
                     loadFiles(file);
                 }
             }
@@ -137,7 +137,6 @@ public class Application {
             player.setOnEndOfMedia(this::next);
             player.setVolume(volume);
             play();
-            state = State.PLAYING;
             player.setOnReady(this::draw);
         } catch (final MediaException e) {
             if (!StringUtils.equals(e.getMessage(), "Unrecognized file signature!")) {

@@ -12,7 +12,7 @@ import java.net.URL;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@Disabled("Just uses to create test files")
+@Disabled("Just used to create test files")
 class TestFileCreator {
 
     private static Mp3File mp3;

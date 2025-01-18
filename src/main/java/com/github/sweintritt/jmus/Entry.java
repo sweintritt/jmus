@@ -20,7 +20,7 @@ public class Entry {
     private String album = StringUtils.EMPTY;
     private String title = StringUtils.EMPTY;
 
-    public void loadMp3Tags() {
+    public synchronized void loadMp3Tags() {
         try {
             final Mp3File mp3 = new Mp3File(file);
             if (mp3.hasId3v2Tag()) {
