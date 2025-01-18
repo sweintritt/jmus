@@ -26,9 +26,9 @@ public class Main {
             log.info("starting...");
             Platform.startup(() -> log.info("initializing javafx"));
             application.run();
-        } catch (final Exception e) {
+        } catch (final Throwable e) {
             System.err.println(e.getMessage());
-            e.printStackTrace();
+            log.error(e.getMessage(), e);
         }
     }
 }

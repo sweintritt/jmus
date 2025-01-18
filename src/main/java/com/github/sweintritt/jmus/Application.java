@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+
 import javafx.application.Platform;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaException;
@@ -278,8 +279,8 @@ public class Application {
         if (version == null) {
             try {
                 version = "v"
-                        + new String(IOUtils
-                                .toByteArray(this.getClass().getClassLoader().getResourceAsStream("version.txt")));
+                        + new String(IOUtils.toByteArray(Objects.requireNonNull(this.getClass().getClassLoader()
+                                .getResourceAsStream("version.txt"))));
             } catch (final IOException e) {
                 log.error("Unable to read version: {}", e.getMessage(), e);
                 version = StringUtils.EMPTY;
