@@ -50,6 +50,10 @@
         <version.mockito>5.15.2</version.mockito>
         <version.junit>5.11.4</version.junit>
         <version.mp3agic>0.9.1</version.mp3agic>
+
+        <!-- Maven plugins -->
+        <version.compiler.plugin>3.13.0</version.compiler.plugin>
+        <version.assembly.plugin>3.7.1</version.assembly.plugin>
     </properties>
 
     <dependencies>
@@ -141,10 +145,12 @@
                 </includes>
             </resource>
         </resources>
+
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>${version.compiler.plugin}</version>
                 <configuration>
                     <source>${maven.compiler.source}</source>
                     <target>${maven.compiler.target}</target>
@@ -161,6 +167,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
+                <version>${version.assembly.plugin}</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
