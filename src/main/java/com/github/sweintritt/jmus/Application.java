@@ -137,7 +137,7 @@ public class Application {
             player = new MediaPlayer(new Media(entry.getFile().toURI().toString()));
             player.setOnEndOfMedia(this::next);
             player.setVolume(volume);
-            play();
+            player.setAutoPlay(true);
             player.setOnReady(this::draw);
         } catch (final MediaException e) {
             if (!StringUtils.equals(e.getMessage(), "Unrecognized file signature!")) {
