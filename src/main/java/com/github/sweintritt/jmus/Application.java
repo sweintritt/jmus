@@ -24,6 +24,7 @@ public class Application {
 
     private final Random random = new Random();
     private final List<Entry> entries = new LinkedList<>();
+    // TODO Use a buffer with fixed size
     private final Deque<Integer> indexStack = new LinkedList<>();
 
     private Entry entry;
