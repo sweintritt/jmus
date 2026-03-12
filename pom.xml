@@ -93,17 +93,17 @@
             <artifactId>log4j-core</artifactId>
             <version>${version.log4j2}</version>
         </dependency>
+        <!-- Source: https://mvnrepository.com/artifact/org.jline/jline -->
+        <dependency>
+            <groupId>org.jline</groupId>
+            <artifactId>jline</artifactId>
+            <version>4.0.0</version>
+        </dependency>
         <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-slf4j-impl -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-slf4j-impl</artifactId>
             <version>${version.log4j2}</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/net.java.dev.jna/jna -->
-        <dependency>
-            <groupId>net.java.dev.jna</groupId>
-            <artifactId>jna</artifactId>
-            <version>${version.jna}</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/com.mpatric/mp3agic -->
         <dependency>
