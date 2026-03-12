@@ -193,7 +193,7 @@ public class Application {
 
             if (entries.isEmpty()) {
                 for (int i = 0; i < rows; ++i) {
-                    System.out.println("\r\n");
+                    terminal.writer().println(StringUtils.EMPTY);
                 }
             } else {
                 final int index = entries.indexOf(entry);
@@ -214,18 +214,19 @@ public class Application {
 
                     if (current == null) {
                         log.debug("no entry at {}", i);
-                        System.out.print("\r\n");
+                        terminal.writer().println(StringUtils.EMPTY);
                     } else if (i == index) {
-                        final String fullTitle = "\033[1;44;1;37m" + getFullTitle(current, columnLength) + "\033[0m";
-                        System.out.print(fullTitle + "\r\n");
+                        terminal.writer()
+                                .println("\033[1;44;1;37m" + getFullTitle(current, columnLength) + "\033[0m");
                     } else {
-                        System.out.print(getFullTitle(current, columnLength) + "\r\n");
+                        terminal.writer().println(getFullTitle(current, columnLength));
                     }
                 }
             }
 
             // Print status line
-            System.out.print("\033[7m" + getStatusLine(columns) + "\033[0m");
+            terminal.writer().print("\033[7m" + getStatusLine(columns) + "\033[0m");
+            terminal.flush();
         } catch (final Exception e) {
             quit(e);
         }
