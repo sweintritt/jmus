@@ -15,8 +15,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
+import org.jline.reader.LineReader;
+import org.jline.reader.LineReaderBuilder;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
+import org.jline.utils.AttributedString;
+import org.jline.utils.AttributedStyle;
 import org.jline.utils.InfoCmp;
 
 @Slf4j
@@ -44,9 +48,12 @@ public class Application {
     private boolean running;
 
     private Terminal terminal;
+    private LineReader reader;
 
     public Application() throws IOException {
        terminal = TerminalBuilder.builder().build();
+       reader = LineReaderBuilder.builder().terminal(terminal).build();
+       // reader.getKeyMaps().get(LineReader.MAIN).bind();
     }
 
     public void run() {
@@ -216,8 +223,9 @@ public class Application {
                         log.debug("no entry at {}", i);
                         terminal.writer().println(StringUtils.EMPTY);
                     } else if (i == index) {
-                        terminal.writer()
-                                .println("\033[1;44;1;37m" + getFullTitle(current, columnLength) + "\033[0m");
+                        var styled = new AttributedString(getFullTitle(current, columnLength),
+                                AttributedStyle.DEFAULT.foreground(AttributedStyle.WHITE).background(AttributedStyle.BLUE));
+                        styled.println(terminal);
                     } else {
                         terminal.writer().println(getFullTitle(current, columnLength));
                     }
@@ -225,7 +233,9 @@ public class Application {
             }
 
             // Print status line
-            terminal.writer().print("\033[7m" + getStatusLine(columns) + "\033[0m");
+            var status = new AttributedString(getStatusLine(columns),
+                    AttributedStyle.DEFAULT.foreground(AttributedStyle.BLACK).background(AttributedStyle.WHITE));
+            status.print(terminal);
             terminal.flush();
         } catch (final Exception e) {
             quit(e);
