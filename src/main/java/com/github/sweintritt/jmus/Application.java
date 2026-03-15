@@ -16,12 +16,9 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 import org.jline.reader.LineReader;
-import org.jline.reader.LineReaderBuilder;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
-import org.jline.utils.AttributedString;
-import org.jline.utils.AttributedStyle;
-import org.jline.utils.InfoCmp;
+import org.jline.utils.*;
 
 @Slf4j
 @Getter
@@ -52,23 +49,20 @@ public class Application {
 
     public Application() throws IOException {
        terminal = TerminalBuilder.builder().build();
-       reader = LineReaderBuilder.builder().terminal(terminal).build();
-       // reader.getKeyMaps().get(LineReader.MAIN).bind();
     }
 
     public void run() {
         try {
+            terminal.enterRawMode();
             log.info("scanning for files");
             loadFiles(directory);
             CompletableFuture.runAsync(() -> entries.forEach(Entry::loadMp3Tags));
-
             log.info("found {} files", entries.size());
             state = State.STOPPED;
-
             running = true;
             next();
             while (running) {
-                final int key = System.in.read();
+                final int key = terminal.reader().read();
                 handleKey(key);
             }
         } catch (final Exception e) {
