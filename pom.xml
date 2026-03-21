@@ -6,7 +6,7 @@
 
     <groupId>com.github.sweintritt</groupId>
     <artifactId>jmus</artifactId>
-    <version>0.2.0-SNAPSHOT</version>
+    <version>0.2.0</version>
 
     <description>
         Simple audio player to play your local library on shuffle.
@@ -53,6 +53,8 @@
 
         <!-- Maven plugins - https://maven.apache.org/plugins -->
         <version.compiler.plugin>3.15.0</version.compiler.plugin>
+        <version.assembly.plugin>3.8.0</version.assembly.plugin>
+        <version.jar.plugin>3.8.0</version.jar.plugin>
         <version.assembly.plugin>3.8.0</version.assembly.plugin>
     </properties>
 
@@ -166,26 +168,90 @@
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>${version.assembly.plugin}</version>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.2.2</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>${main.class}</mainClass>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.3.0</version>
                 <executions>
                     <execution>
+                        <id>copy-dependencies</id>
                         <phase>package</phase>
                         <goals>
-                            <goal>single</goal>
+                            <goal>copy-dependencies</goal>
                         </goals>
                         <configuration>
-                            <archive>
-                                <manifest>
-                                    <mainClass>${main.class}</mainClass>
-                                </manifest>
-                            </archive>
-                            <descriptorRefs>
-                                <descriptorRef>jar-with-dependencies</descriptorRef>
-                            </descriptorRefs>
+                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                            <includeScope>runtime</includeScope>
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>rpm-maven-plugin</artifactId>
+                <version>2.3.0</version>
+                <executions>
+                    <execution>
+                        <id>generate-rpm</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>rpm</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <name>${project.name}</name>
+                    <group>Applications/Multimedia</group>
+                    <version>${project.version}</version>
+                    <summary>${project.description}</summary>
+                    <license>MIT</license>
+                    <requires>
+                        <require>java-21-openjdk</require>
+                    </requires>
+                    <mappings>
+                        <mapping>
+                            <directory>/opt/${project.name}/lib</directory>
+                            <filemode>755</filemode>
+                            <sources>
+                                <source>
+                                    <location>target/${project.name}-${project.version}.jar</location>
+                                    <destination>${project.name}.jar</destination>
+                                </source>
+                            </sources>
+                        </mapping>
+                        <mapping>
+                            <directory>/opt/${project.name}/lib</directory>
+                            <filemode>644</filemode>
+                            <sources>
+                                <source>
+                                    <location>target/lib</location>
+                                </source>
+                            </sources>
+                        </mapping>
+                        <mapping>
+                            <directory>/usr/local/bin</directory>
+                            <filemode>755</filemode>
+                            <sources>
+                                <source>
+                                    <location>src/scripts/cora</location>
+                                </source>
+                            </sources>
+                        </mapping>
+                    </mappings>
+                </configuration>
             </plugin>
         </plugins>
     </build>

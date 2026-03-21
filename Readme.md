@@ -2,9 +2,7 @@ jmus - *J*ava *Mus*ic Player
 =============================
 
 A very simple music player to play your local music library on shuffle,
-in the console using libc (Thanks [Marco](https://www.youtube.com/watch?v=kT4JYQi9w4w)!)
-
-jmus uses *libc* for drawing.
+in the console using  [jline](https://jline.org/).
 
 # Play
 
@@ -12,7 +10,7 @@ Provide the folder to your music library on start. jmus will search all of its s
 for mp3 files. For now only mp3-Files are played.
 
 ```bash
-$ java -jar jmus.jar ~/Music
+$ jmus ~/Music
 ```
 
 After scanning for files, jmus starts playing a random song. While playing jmus reads all
@@ -39,8 +37,11 @@ executed by pressing the button in brackets.
 To build jmus you need [Maven](https://maven.apache.org/) and a [Java JDK](https://openjdk.org/)
 (min. Version 21).
 
+You can build an RPM-Package and install it:
+
 ```bash
-$ mvn package
+$ mvn package rpm:rpm
+
 ```
 
 # Log
