@@ -14,6 +14,11 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
+import org.jline.reader.LineReader;
+import org.jline.terminal.Terminal;
+import org.jline.terminal.TerminalBuilder;
+import org.jline.utils.*;
 
 @Slf4j
 @Getter
@@ -32,10 +37,6 @@ public class Application {
     private String version;
     private double volume = 0.5;
     /**
-     * Backup of the original values
-     */
-    private LibC.Termios backup;
-    /**
      * Root directory to scan for music
      */
     private File directory;
@@ -43,20 +44,25 @@ public class Application {
     private Media media;
     private boolean running;
 
+    private Terminal terminal;
+    private LineReader reader;
+
+    public Application() throws IOException {
+       terminal = TerminalBuilder.builder().build();
+    }
+
     public void run() {
         try {
-            enableRawMode();
+            terminal.enterRawMode();
             log.info("scanning for files");
             loadFiles(directory);
             CompletableFuture.runAsync(() -> entries.forEach(Entry::loadMp3Tags));
-
             log.info("found {} files", entries.size());
             state = State.STOPPED;
-
             running = true;
             next();
             while (running) {
-                final int key = System.in.read();
+                final int key = terminal.reader().read();
                 handleKey(key);
             }
         } catch (final Exception e) {
@@ -70,7 +76,7 @@ public class Application {
         if (files != null) {
             for (final File file : files) {
                 // For now just mp3s is fine
-                if (file != null && file.isFile() && StringUtils.endsWithIgnoreCase(file.getName(), ".mp3")) {
+                if (file != null && file.isFile() && Strings.CI.endsWith(file.getName(), ".mp3")) {
                     entries.add(new Entry(file));
                 } else if (file != null && file.isDirectory()) {
                     loadFiles(file);
@@ -141,7 +147,7 @@ public class Application {
             player.setAutoPlay(true);
             player.setOnReady(this::draw);
         } catch (final MediaException e) {
-            if (!StringUtils.equals(e.getMessage(), "Unrecognized file signature!")) {
+            if (!Strings.CS.equals(e.getMessage(), "Unrecognized file signature!")) {
                 log.error("Error during playback: {} ", e.getMessage(), e);
             }
         } catch (final Exception e) {
@@ -162,7 +168,6 @@ public class Application {
     public void quit(final Exception e) {
         setRunning(false);
         Optional.ofNullable(player).ifPresent(MediaPlayer::stop);
-        disableRawMode();
         clearScreen();
         if (e != null) {
             log.error(e.getMessage(), e);
@@ -175,66 +180,26 @@ public class Application {
         quit(null);
     }
 
-    public LibC.Winsize getWindowsize() {
-        final LibC.Winsize winsize = new LibC.Winsize();
-        final int rc = LibC.INSTANCE.ioctl(LibC.SYSTEM_OUT_FD, LibC.TIOCGWINSZ, winsize);
-        if (rc != 0) {
-            throw new IllegalStateException("error calling libc.ioctl rc: " + rc);
-        }
-        return winsize;
-    }
-
-    public void enableRawMode() {
-        log.debug("enable terminal raw mode");
-        final LibC.Termios termios = new LibC.Termios();
-        int rc = LibC.INSTANCE.tcgetattr(LibC.SYSTEM_OUT_FD, termios);
-        if (rc != 0) {
-            throw new IllegalStateException("error calling libc.tcgetattr rc: " + rc);
-        }
-        backup = LibC.Termios.of(termios);
-        termios.c_lflag &= ~(LibC.ECHO | LibC.ICANON | LibC.IEXTEN | LibC.ISIG);
-        termios.c_iflag &= ~(LibC.IXON | LibC.ICRNL);
-        termios.c_oflag &= ~(LibC.OPOST);
-
-        rc = LibC.INSTANCE.tcsetattr(LibC.SYSTEM_OUT_FD, LibC.TCSAFLUSH, termios);
-        if (rc != 0) {
-            throw new IllegalStateException("error calling libc.tcsetattr rc: " + rc);
-        }
-
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            disableRawMode();
-            clearScreen();
-        }));
-    }
-
-    public void disableRawMode() {
-        log.debug("reset terminal");
-        final int rc = LibC.INSTANCE.tcsetattr(LibC.SYSTEM_OUT_FD, LibC.TCSAFLUSH, backup);
-        if (rc != 0) {
-            throw new IllegalStateException("error calling libc.tcsetattr rc: " + rc);
-        }
-    }
-
     public void clearScreen() {
         log.debug("clear screen");
-        System.out.print("\033[2J");
-        System.out.print("\033[H");
+        terminal.puts(InfoCmp.Capability.clear_screen);
+        terminal.flush();
     }
 
     public void draw() {
         try {
-            final LibC.Winsize winsize = getWindowsize();
+            var rows = terminal.getHeight();
+            var columns = terminal.getWidth();
             clearScreen();
 
             if (entries.isEmpty()) {
-                for (int i = 0; i < winsize.ws_row; ++i) {
-                    System.out.println("\r\n");
+                for (int i = 0; i < rows; ++i) {
+                    terminal.writer().println(StringUtils.EMPTY);
                 }
             } else {
                 final int index = entries.indexOf(entry);
                 // Try to position the current title in the middle of the screen
-                final int half = Math.floorDiv(winsize.ws_row, 2);
-                // rows: 38, half: 19, enttries: 89, index: 74
+                final int half = Math.floorDiv(rows, 2);
                 int startIndex = index - half;
                 if (index + half > entries.size()) {
                     startIndex -= (index + half) - entries.size();
@@ -242,26 +207,30 @@ public class Application {
 
                 // Ensure that the start index is in bounds of the entry list
                 startIndex = Math.min(entries.size(), Math.max(0, startIndex));
-                final int columnLength = Math.max(0, winsize.ws_col / 3);
-                log.debug("rows: {}, half: {}, index: {}, startIndex: {}, entries: {}", winsize.ws_row, half, index,
+                final int columnLength = Math.max(0, columns / 3);
+                log.debug("rows: {}, half: {}, index: {}, startIndex: {}, entries: {}", rows, half, index,
                         startIndex, entries.size());
-                for (int i = startIndex; i < startIndex + winsize.ws_row; ++i) {
+                for (int i = startIndex; i < startIndex + rows; ++i) {
                     final Entry current = (i > entries.size() - 1) ? null : entries.get(i);
 
                     if (current == null) {
                         log.debug("no entry at {}", i);
-                        System.out.print("\r\n");
+                        terminal.writer().println(StringUtils.EMPTY);
                     } else if (i == index) {
-                        final String fullTitle = "\033[1;44;1;37m" + getFullTitle(current, columnLength) + "\033[0m";
-                        System.out.print(fullTitle + "\r\n");
+                        var styled = new AttributedString(getFullTitle(current, columnLength),
+                                AttributedStyle.DEFAULT.foreground(AttributedStyle.WHITE).background(AttributedStyle.BLUE));
+                        styled.println(terminal);
                     } else {
-                        System.out.print(getFullTitle(current, columnLength) + "\r\n");
+                        terminal.writer().println(getFullTitle(current, columnLength));
                     }
                 }
             }
 
             // Print status line
-            System.out.print("\033[7m" + getStatusLine(winsize.ws_col) + "\033[0m");
+            var status = new AttributedString(getStatusLine(columns),
+                    AttributedStyle.DEFAULT.foreground(AttributedStyle.BLACK).background(AttributedStyle.WHITE));
+            status.print(terminal);
+            terminal.flush();
         } catch (final Exception e) {
             quit(e);
         }
