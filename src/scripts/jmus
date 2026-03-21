@@ -1,0 +1,3 @@
+#!/bin/bash
+
+java -cp "/opt/jmus/lib/*" com.github.sweintritt.jmus.Main "$@"
