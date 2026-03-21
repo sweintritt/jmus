@@ -217,6 +217,7 @@
                     <group>Applications/Multimedia</group>
                     <version>${project.version}</version>
                     <summary>${project.description}</summary>
+                    <url>https://github.com/sweintritt/jmus/</url>
                     <license>MIT</license>
                     <requires>
                         <require>java-21-openjdk</require>
@@ -246,7 +247,7 @@
                             <filemode>755</filemode>
                             <sources>
                                 <source>
-                                    <location>src/scripts/cora</location>
+                                    <location>src/scripts/jmus</location>
                                 </source>
                             </sources>
                         </mapping>
