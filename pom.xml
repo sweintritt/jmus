@@ -38,24 +38,23 @@
         <main.class>com.github.sweintritt.jmus.Main</main.class>
 
         <!-- Library versions -->
-        <version.javafx>21.0.9</version.javafx>
         <version.commons.io>2.21.0</version.commons.io>
         <version.commons-lang>3.20.0</version.commons-lang>
         <version.lombok>1.18.44</version.lombok>
         <version.slf4j>2.0.17</version.slf4j>
-        <version.log4j>2.25.3</version.log4j>
+        <version.log4j>2.25.4</version.log4j>
         <version.jna>5.18.1</version.jna>
         <version.assertj>3.27.7</version.assertj>
         <version.mockito>5.23.0</version.mockito>
         <version.junit>6.0.3</version.junit>
-        <version.mp3agic>0.9.1</version.mp3agic>
-        <version.jline>4.0.4</version.jline>
+        <version.jline>4.0.9</version.jline>
+        <version.vlcj>4.12.1</version.vlcj>
 
         <!-- Maven plugins - https://maven.apache.org/plugins -->
         <version.compiler.plugin>3.15.0</version.compiler.plugin>
-        <version.assembly.plugin>3.8.0</version.assembly.plugin>
-        <version.jar.plugin>3.8.0</version.jar.plugin>
-        <version.assembly.plugin>3.8.0</version.assembly.plugin>
+        <version.rpm.plugin>2.3.0</version.rpm.plugin>
+        <version.dependency.plugin>3.10.0</version.dependency.plugin>
+        <version.jar.plugin>3.5.0</version.jar.plugin>
     </properties>
 
     <dependencies>
@@ -77,12 +76,6 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
             <version>${version.commons-lang}</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/org.openjfx/javafx-media -->
-        <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-media</artifactId>
-            <version>${version.javafx}</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
         <dependency>
@@ -108,11 +101,11 @@
             <artifactId>jline</artifactId>
             <version>${version.jline}</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/com.mpatric/mp3agic -->
+        <!-- Source: https://mvnrepository.com/artifact/uk.co.caprica/vlcj -->
         <dependency>
-            <groupId>com.mpatric</groupId>
-            <artifactId>mp3agic</artifactId>
-            <version>${version.mp3agic}</version>
+            <groupId>uk.co.caprica</groupId>
+            <artifactId>vlcj</artifactId>
+            <version>${version.vlcj}</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.assertj/assertj-core -->
         <dependency>
@@ -169,7 +162,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>3.2.2</version>
+                <version>${version.jar.plugin}</version>
                 <configuration>
                     <archive>
                         <manifest>
@@ -184,7 +177,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.3.0</version>
+                <version>${version.dependency.plugin}</version>
                 <executions>
                     <execution>
                         <id>copy-dependencies</id>
@@ -202,7 +195,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>rpm-maven-plugin</artifactId>
-                <version>2.3.0</version>
+                <version>${version.rpm.plugin}</version>
                 <executions>
                     <execution>
                         <id>generate-rpm</id>
@@ -221,6 +214,7 @@
                     <license>MIT</license>
                     <requires>
                         <require>java-21-openjdk</require>
+                        <require>vlc-libs &gt; 3.0.0</require>
                     </requires>
                     <mappings>
                         <mapping>

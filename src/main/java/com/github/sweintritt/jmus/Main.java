@@ -2,7 +2,6 @@ package com.github.sweintritt.jmus;
 
 import java.io.File;
 
-import javafx.application.Platform;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -24,7 +23,6 @@ public class Main {
             final Application application = new Application();
             application.setDirectory(file);
             log.info("starting...");
-            Platform.startup(() -> log.info("initializing javafx"));
             application.run();
         } catch (final Throwable e) {
             System.err.println(e.getMessage());

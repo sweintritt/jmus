@@ -3,11 +3,8 @@ package com.github.sweintritt.jmus;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URL;
 
-import com.mpatric.mp3agic.*;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class EntryTest {

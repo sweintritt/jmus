@@ -3,22 +3,20 @@ package com.github.sweintritt.jmus;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 
-import javafx.application.Platform;
-import javafx.scene.media.Media;
-import javafx.scene.media.MediaException;
-import javafx.scene.media.MediaPlayer;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
-import org.jline.reader.LineReader;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 import org.jline.utils.*;
+import uk.co.caprica.vlcj.factory.MediaPlayerFactory;
+import uk.co.caprica.vlcj.media.Media;
+import uk.co.caprica.vlcj.player.base.MediaPlayer;
+import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter;
 
 @Slf4j
 @Getter
@@ -26,6 +24,7 @@ import org.jline.utils.*;
 public class Application {
 
     private static final String STATUS = "[ jmus %s | %d files | vol:%d | %s ] (q)uit, (s)top, (p)lay, (b)ack, (n)ext, (+)volume, (-)volume";
+    private static final MediaPlayerFactory MEDIA_FACTORY = new MediaPlayerFactory();
 
     private final Random random = new Random();
     private final List<Entry> entries = new LinkedList<>();
@@ -35,7 +34,7 @@ public class Application {
     private Entry entry;
     private State state = State.SEARCHING;
     private String version;
-    private double volume = 0.5;
+    private int volume = 50;
     /**
      * Root directory to scan for music
      */
@@ -45,7 +44,6 @@ public class Application {
     private boolean running;
 
     private Terminal terminal;
-    private LineReader reader;
 
     public Application() throws IOException {
        terminal = TerminalBuilder.builder().build();
@@ -56,7 +54,6 @@ public class Application {
             terminal.enterRawMode();
             log.info("scanning for files");
             loadFiles(directory);
-            CompletableFuture.runAsync(() -> entries.forEach(Entry::loadMp3Tags));
             log.info("found {} files", entries.size());
             state = State.STOPPED;
             running = true;
@@ -86,6 +83,7 @@ public class Application {
     }
 
     public void handleKey(final int key) {
+        log.debug("key:{}", key);
         switch (key) {
             case 'n':
                 next();
@@ -103,11 +101,11 @@ public class Application {
                 quit();
                 break;
             case '+':
-                setVolume(player.getVolume() + 0.1);
+                setVolume(player.audio().volume() + 10);
                 draw();
                 break;
             case '-':
-                setVolume(player.getVolume() - 0.1);
+                setVolume(player.audio().volume() - 10);
                 draw();
                 break;
             default:
@@ -115,12 +113,14 @@ public class Application {
         }
     }
 
-    public void setVolume(final double volume) {
-        this.volume = Math.min(1.0, Math.max(0.0, volume));
-        Optional.ofNullable(player).ifPresent(p -> p.setVolume(this.volume));
+    public void setVolume(final int volume) {
+        log.debug("set volume to {}", volume);
+        this.volume = Math.clamp(volume, 0, 100);
+        Optional.ofNullable(player).ifPresent(p -> p.audio().setVolume(this.volume));
     }
 
     public void next() {
+        log.debug("playing next song");
         play(random.nextInt(entries.size()));
     }
 
@@ -129,6 +129,7 @@ public class Application {
      */
     public void back() {
         if (indexStack.size() > 1) {
+            log.debug("playing previous song");
             indexStack.pop();
             play(indexStack.pop());
         }
@@ -136,44 +137,50 @@ public class Application {
 
     public void play(final int index) {
         indexStack.push(index);
-        Optional.ofNullable(player).ifPresent(MediaPlayer::stop);
-        Optional.ofNullable(player).ifPresent(MediaPlayer::dispose);
+        Optional.ofNullable(player).ifPresent(p -> p.controls().stop());
+        Optional.ofNullable(player).ifPresent(MediaPlayer::release);
         try {
             entry = entries.get(index);
             log.info("playing {}", entry.getFile().getName());
-            player = new MediaPlayer(new Media(entry.getFile().toURI().toString()));
-            player.setOnEndOfMedia(this::next);
-            player.setVolume(volume);
-            player.setAutoPlay(true);
-            player.setOnReady(this::draw);
-        } catch (final MediaException e) {
-            if (!Strings.CS.equals(e.getMessage(), "Unrecognized file signature!")) {
-                log.error("Error during playback: {} ", e.getMessage(), e);
-            }
+            player = MEDIA_FACTORY.mediaPlayers().newMediaPlayer();
+            media = entry.getMedia();
+            player.media().play(entry.getMedia().info().mrl());
+            player.events().addMediaPlayerEventListener(new MediaPlayerEventAdapter() {
+                @Override
+                public void finished(final MediaPlayer player) {
+                    next();
+                }
+            });
+            player.audio().setVolume(volume);
+            this.play();
+            this.draw();
         } catch (final Exception e) {
             log.error("Error during playback: {} ", e.getMessage(), e);
         }
     }
 
     public void stop() {
-        Optional.ofNullable(player).ifPresent(MediaPlayer::pause);
+        log.debug("stopping");
+        Optional.ofNullable(player).ifPresent(p -> p.controls().stop());
         state = State.STOPPED;
     }
 
     public void play() {
-        Optional.ofNullable(player).ifPresent(MediaPlayer::play);
+        log.debug("playing");
+        Optional.ofNullable(player).ifPresent(p -> p.controls().start());
         state = State.PLAYING;
     }
 
     public void quit(final Exception e) {
+        log.debug("quiting");
         setRunning(false);
-        Optional.ofNullable(player).ifPresent(MediaPlayer::stop);
+        stop();
         clearScreen();
         if (e != null) {
             log.error(e.getMessage(), e);
             System.err.println("Error: " + e.getMessage());
         }
-        Platform.exit();
+        System.exit(0);
     }
 
     public void quit() {
@@ -188,6 +195,7 @@ public class Application {
 
     public void draw() {
         try {
+            log.debug("draw");
             var rows = terminal.getHeight();
             var columns = terminal.getWidth();
             clearScreen();
@@ -206,7 +214,7 @@ public class Application {
                 }
 
                 // Ensure that the start index is in bounds of the entry list
-                startIndex = Math.min(entries.size(), Math.max(0, startIndex));
+                startIndex = Math.clamp(startIndex, 0, entries.size());
                 final int columnLength = Math.max(0, columns / 3);
                 log.debug("rows: {}, half: {}, index: {}, startIndex: {}, entries: {}", rows, half, index,
                         startIndex, entries.size());
@@ -240,7 +248,7 @@ public class Application {
         final String status = String.format(STATUS,
                 getVersion(),
                 entries.size(),
-                (int) (Optional.ofNullable(player).map(MediaPlayer::getVolume).orElse(0d) * 100.0),
+                Optional.ofNullable(player).map(p -> p.audio().volume()).orElse(0),
                 state.toString().toLowerCase());
         return status + " ".repeat(Math.max(0, length - status.length()));
     }
