@@ -3,6 +3,7 @@ package com.github.sweintritt.jmus;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -51,10 +52,11 @@ public class Application {
 
     public void run() {
         try {
-            terminal.enterRawMode();
-            log.info("scanning for files");
+            log.info("scanning {}", directory.getAbsoluteFile());
             loadFiles(directory);
             log.info("found {} files", entries.size());
+            CompletableFuture.runAsync(() -> entries.forEach(Entry::loadMetadata));
+            terminal.enterRawMode();
             state = State.STOPPED;
             running = true;
             next();

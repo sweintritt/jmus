@@ -4,7 +4,6 @@ import java.io.File;
 import java.util.Comparator;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -30,37 +29,34 @@ public class Entry {
     public Entry(final File file) {
         this.file = file;
         this.media = MEDIA_FACTORY.media().newMedia(file.toPath().toString());
-        this.loadMetadata();
     }
 
-    public synchronized void loadMetadata() {
-        latch = new CountDownLatch(1);
-
-        media.events().addMediaEventListener(new MediaEventAdapter() {
-            @Override
-            public void mediaParsedChanged(final Media media, final MediaParsedStatus status) {
-                switch (status) {
-                    case SKIPPED, FAILED, TIMEOUT:
-                        log.error("Unable to parse metadata for {}", media.info().mrl());
-                        latch.countDown();
-                        break;
-                    case DONE:
-                        log.debug("Parsed metadata for {}", media.info().mrl());
-                        setMetadata(media.meta());
-                        latch.countDown();
-                        break;
-                }
-            }
-        });
-
-        if (media.parsing().status() != MediaParsedStatus.DONE) {
-            media.parsing().parse();
-        }
-    }
-
-    private void waitForMetadata() {
+    public void loadMetadata() {
         if (media.parsing().status() != MediaParsedStatus.DONE) {
             synchronized (this) {
+                latch = new CountDownLatch(1);
+
+                media.events().addMediaEventListener(new MediaEventAdapter() {
+                    @Override
+                    public void mediaParsedChanged(final Media media, final MediaParsedStatus status) {
+                        switch (status) {
+                            case SKIPPED, FAILED, TIMEOUT:
+                                log.error("Unable to parse metadata for {}", media.info().mrl());
+                                latch.countDown();
+                                break;
+                            case DONE:
+                                log.debug("Parsed metadata for {}", media.info().mrl());
+                                setMetadata(media.meta());
+                                latch.countDown();
+                                break;
+                        }
+                    }
+                });
+
+                if (media.parsing().status() != MediaParsedStatus.DONE) {
+                    media.parsing().parse();
+                }
+
                 try {
                     if (media.parsing().status() != MediaParsedStatus.DONE && !latch.await(30, TimeUnit.SECONDS)) {
                         log.error("parsing metadata of {} did reach the timeout", media.info().mrl());
@@ -85,17 +81,17 @@ public class Entry {
     }
 
     public String getArtist() {
-        waitForMetadata();
+        loadMetadata();
         return artist;
     }
 
     public String getAlbum() {
-        waitForMetadata();
+        loadMetadata();
         return album;
     }
 
     public String getTitle() {
-        waitForMetadata();
+        loadMetadata();
         return title;
     }
 
