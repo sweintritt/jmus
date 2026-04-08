@@ -1,7 +1,5 @@
 # ToDo
 
-- test rpm dependency to vlc
- load tags async in main like before
 - Show column headers
 - Show year and genre
 - Configurable Columns?

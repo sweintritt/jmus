@@ -41,13 +41,19 @@ You can build an RPM-Package and install it:
 
 ```bash
 $ mvn package rpm:rpm
+```
 
+Install the generated rpm package with:
+
+```bash
+$ sudo dnf install target/rpm/jmus/RPMS/noarch/jmus-0.2.0-1.noarch.rpm
 ```
 
 # Log
 
 jmus creates a log file in your home folder `.jmus.log`. The file is cleared on every start.
 
-# Known Issues
+# Dependencies
 
-* Somtimes the app crashes on start. Just close it with CTRL-C and start again.
+- [vlc](https://code.videolan.org/videolan/vlc) for playback
+
