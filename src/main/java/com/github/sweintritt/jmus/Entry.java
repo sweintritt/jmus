@@ -1,81 +1,97 @@
 package com.github.sweintritt.jmus;
 
-import com.mpatric.mp3agic.ID3v1;
-import com.mpatric.mp3agic.ID3v2;
-import com.mpatric.mp3agic.Mp3File;
 import java.io.File;
 import java.util.Comparator;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import uk.co.caprica.vlcj.factory.MediaPlayerFactory;
+import uk.co.caprica.vlcj.media.*;
 
 @Slf4j
 @Data
-@RequiredArgsConstructor
 public class Entry {
 
+    private static final MediaPlayerFactory MEDIA_FACTORY = new MediaPlayerFactory();
+
     private final File file;
-    private String artist = StringUtils.EMPTY;
-    private String album = StringUtils.EMPTY;
-    private String title = StringUtils.EMPTY;
+    private final Media media;
 
-    public synchronized void loadMp3Tags() {
-        try {
-            final Mp3File mp3 = new Mp3File(file);
-            if (mp3.hasId3v2Tag()) {
-                final ID3v2 tag = mp3.getId3v2Tag();
-                this.artist = StringUtils.trimToEmpty(tag.getArtist());
-                this.album = StringUtils.trimToEmpty(tag.getAlbum());
-                this.title = StringUtils.trimToEmpty(tag.getTitle());
-            } else if (mp3.hasId3v1Tag()) {
-                final ID3v1 tag = mp3.getId3v1Tag();
-                this.artist = StringUtils.trimToEmpty(tag.getArtist());
-                this.album = StringUtils.trimToEmpty(tag.getAlbum());
-                this.title = StringUtils.trimToEmpty(tag.getTitle());
-            } else {
-                log.error("no id3v1 or id3v2 tags found in {}", file.getName());
+    private CountDownLatch latch;
+
+    private String artist = "unknown artist";
+    private String album = "unknown album";
+    private String title = "unknown title";
+
+    public Entry(final File file) {
+        this.file = file;
+        this.media = MEDIA_FACTORY.media().newMedia(file.toPath().toString());
+    }
+
+    public void loadMetadata() {
+        if (media.parsing().status() != MediaParsedStatus.DONE) {
+            synchronized (this) {
+                latch = new CountDownLatch(1);
+
+                media.events().addMediaEventListener(new MediaEventAdapter() {
+                    @Override
+                    public void mediaParsedChanged(final Media media, final MediaParsedStatus status) {
+                        switch (status) {
+                            case SKIPPED, FAILED, TIMEOUT:
+                                log.error("Unable to parse metadata for {}", media.info().mrl());
+                                latch.countDown();
+                                break;
+                            case DONE:
+                                log.debug("Parsed metadata for {}", media.info().mrl());
+                                setMetadata(media.meta());
+                                latch.countDown();
+                                break;
+                        }
+                    }
+                });
+
+                if (media.parsing().status() != MediaParsedStatus.DONE) {
+                    media.parsing().parse();
+                }
+
+                try {
+                    if (media.parsing().status() != MediaParsedStatus.DONE && !latch.await(30, TimeUnit.SECONDS)) {
+                        log.error("parsing metadata of {} did reach the timeout", media.info().mrl());
+                    }
+                } catch (final Exception e) {
+                    log.error("unable to read mp3 tags from {}: {}", file.getName(), e.getMessage());
+                    if (e instanceof InterruptedException) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
             }
-
-            checkAndSetDefaults();
-        } catch (final Exception e) {
-            log.error("unable to read mp3 tags from {}: {}", file.getName(), e.getMessage());
-            checkAndSetDefaults();
         }
     }
 
-    private void checkAndSetDefaults() {
-        if (StringUtils.isBlank(this.artist)) {
-            this.artist = "unknown artist";
-        }
-
-        if (StringUtils.isBlank(this.album)) {
-            this.album = "unknown album";
-        }
-
-        if (StringUtils.isBlank(this.title)) {
-            this.title = file.getName();
+    private void setMetadata(final MetaApi meta) {
+        artist = StringUtils.trimToEmpty(meta.get(Meta.ARTIST));
+        album = StringUtils.trimToEmpty(meta.get(Meta.ALBUM));
+        title = StringUtils.trimToEmpty(meta.get(Meta.TITLE));
+        if (StringUtils.isEmpty(title)) {
+            title = file.getName();
         }
     }
 
     public String getArtist() {
-        if (StringUtils.isEmpty(artist)) {
-            loadMp3Tags();
-        }
+        loadMetadata();
         return artist;
     }
 
     public String getAlbum() {
-        if (StringUtils.isEmpty(artist)) {
-            loadMp3Tags();
-        }
+        loadMetadata();
         return album;
     }
 
     public String getTitle() {
-        if (StringUtils.isEmpty(artist)) {
-            loadMp3Tags();
-        }
+        loadMetadata();
         return title;
     }
 

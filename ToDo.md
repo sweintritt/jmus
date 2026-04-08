@@ -1,7 +1,5 @@
 # ToDo
 
-- Crashes sometimes: jfxmediaimpl.platform.java.JavaPlatform.createMetadataParser
-- If the terminal window is too small the app crashes
 - Show column headers
 - Show year and genre
 - Configurable Columns?
