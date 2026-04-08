@@ -215,6 +215,7 @@
                     <requires>
                         <require>java-21-openjdk</require>
                         <require>vlc-libs &gt; 3.0.0</require>
+                        <require>vlc-plugins-base &gt; 3.0.0</require>
                     </requires>
                     <mappings>
                         <mapping>
