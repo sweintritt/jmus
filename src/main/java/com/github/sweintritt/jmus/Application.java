@@ -29,8 +29,7 @@ public class Application {
 
     private final Random random = new Random();
     private final List<Entry> entries = new LinkedList<>();
-    // TODO Use a buffer with fixed size
-    private final Deque<Integer> indexStack = new LinkedList<>();
+    private final Queue<Integer> indexStack = new LimitedLiFoQueue<>(100);
 
     private Entry entry;
     private State state = State.SEARCHING;
@@ -123,27 +122,30 @@ public class Application {
 
     public void next() {
         log.debug("playing next song");
-        play(random.nextInt(entries.size()));
+        if (entry != null) {
+            indexStack.add(entries.indexOf(entry));
+        }
+        var index = random.nextInt(entries.size());
+        log.debug("index stack size: {}", indexStack.size());
+        play(index);
     }
 
     /**
      * Jump back one track in the list
      */
     public void back() {
-        if (indexStack.size() > 1) {
-            log.debug("playing previous song");
-            indexStack.pop();
-            play(indexStack.pop());
+        log.debug("playing previous song. index stack size: {}", indexStack.size());
+        if (!indexStack.isEmpty()) {
+            play(indexStack.poll());
         }
     }
 
     public void play(final int index) {
-        indexStack.push(index);
         Optional.ofNullable(player).ifPresent(p -> p.controls().stop());
         Optional.ofNullable(player).ifPresent(MediaPlayer::release);
         try {
             entry = entries.get(index);
-            log.info("playing {}", entry.getFile().getName());
+            log.info("playing {}, index:{}", entry.getFile().getName(), index);
             player = MEDIA_FACTORY.mediaPlayers().newMediaPlayer();
             media = entry.getMedia();
             player.media().play(entry.getMedia().info().mrl());
