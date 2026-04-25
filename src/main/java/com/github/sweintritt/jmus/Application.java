@@ -15,51 +15,54 @@ import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 import org.jline.utils.*;
 import uk.co.caprica.vlcj.factory.MediaPlayerFactory;
-import uk.co.caprica.vlcj.media.Media;
 import uk.co.caprica.vlcj.player.base.MediaPlayer;
 import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter;
 
 @Slf4j
 @Getter
 @Setter
-public class Application {
+public final class Application {
 
-    private static final String STATUS = "[ jmus %s | %d files | vol:%d | %s ] (q)uit, (s)top, (p)lay, (b)ack, (n)ext, (+)volume, (-)volume";
+    private enum Mode {
+        SORTED,
+        RANDOM
+    }
+
+    private static final String STATUS = "[ jmus %s | %d files | vol:%d | %s ] (q)uit, (s)top, (p)lay, (b)ack, " +
+            "(n)ext, (+)vol, (-)vol, (r)and";
     private static final MediaPlayerFactory MEDIA_FACTORY = new MediaPlayerFactory();
 
-    private final Random random = new Random();
     private final List<Entry> entries = new LinkedList<>();
-    private final Queue<Integer> indexStack = new LimitedLiFoQueue<>(100);
+    private final Queue<Entry> playStack = new LimitedLiFoQueue<>(100);
 
     private Entry entry;
-    private State state = State.SEARCHING;
+    private Mode mode = Mode.SORTED;
     private String version;
     private int volume = 50;
-    /**
-     * Root directory to scan for music
-     */
-    private File directory;
     private MediaPlayer player;
-    private Media media;
-    private boolean running;
-
     private Terminal terminal;
+    private boolean running;
+    private int index = -1;
 
     public Application() throws IOException {
        terminal = TerminalBuilder.builder().build();
     }
 
-    public void run() {
+    /**
+     * @param directory Root directory to scan for music
+     */
+    public void run(final File directory) {
         try {
             log.info("scanning {}", directory.getAbsoluteFile());
             loadFiles(directory);
             log.info("found {} files", entries.size());
             CompletableFuture.runAsync(() -> entries.forEach(Entry::loadMetadata));
             terminal.enterRawMode();
-            state = State.STOPPED;
             running = true;
+            toggleRandom();
             next();
             while (running) {
+                draw();
                 final int key = terminal.reader().read();
                 handleKey(key);
             }
@@ -86,32 +89,26 @@ public class Application {
     public void handleKey(final int key) {
         log.debug("key:{}", key);
         switch (key) {
-            case 'n':
-                next();
-                break;
-            case 'b':
-                back();
-                break;
-            case 'p':
-                play();
-                break;
-            case 's':
-                stop();
-                break;
-            case 'q':
-                quit();
-                break;
-            case '+':
-                setVolume(player.audio().volume() + 10);
-                draw();
-                break;
-            case '-':
-                setVolume(player.audio().volume() - 10);
-                draw();
-                break;
-            default:
-                break;
+            case 'n' -> next();
+            case 'b' -> back();
+            case 'p' -> play();
+            case 's' -> stop();
+            case 'q' -> quit();
+            case '+' -> setVolume(player.audio().volume() + 10);
+            case '-' -> setVolume(player.audio().volume() - 10);
+            case 'r' -> toggleRandom();
         }
+    }
+
+    public void toggleRandom() {
+       if (Mode.RANDOM == mode) {
+           Collections.sort(entries);
+           mode = Mode.SORTED;
+       } else {
+           Collections.shuffle(entries);
+           mode = Mode.RANDOM;
+       }
+       index = entries.indexOf(entry);
     }
 
     public void setVolume(final int volume) {
@@ -123,10 +120,10 @@ public class Application {
     public void next() {
         log.debug("playing next song");
         if (entry != null) {
-            indexStack.add(entries.indexOf(entry));
+            playStack.add(entry);
         }
-        var index = random.nextInt(entries.size());
-        log.debug("index stack size: {}", indexStack.size());
+
+        index = (index >= entries.size() - 1) ? 0 : index + 1;
         play(index);
     }
 
@@ -134,9 +131,10 @@ public class Application {
      * Jump back one track in the list
      */
     public void back() {
-        log.debug("playing previous song. index stack size: {}", indexStack.size());
-        if (!indexStack.isEmpty()) {
-            play(indexStack.poll());
+        log.debug("playing previous song. index stack size: {}", playStack.size());
+        if (!playStack.isEmpty()) {
+            var index = entries.indexOf(playStack.poll());
+            play(index);
         }
     }
 
@@ -147,7 +145,6 @@ public class Application {
             entry = entries.get(index);
             log.info("playing {}, index:{}", entry.getFile().getName(), index);
             player = MEDIA_FACTORY.mediaPlayers().newMediaPlayer();
-            media = entry.getMedia();
             player.media().play(entry.getMedia().info().mrl());
             player.events().addMediaPlayerEventListener(new MediaPlayerEventAdapter() {
                 @Override
@@ -157,7 +154,6 @@ public class Application {
             });
             player.audio().setVolume(volume);
             this.play();
-            this.draw();
         } catch (final Exception e) {
             log.error("Error during playback: {} ", e.getMessage(), e);
         }
@@ -166,13 +162,11 @@ public class Application {
     public void stop() {
         log.debug("stopping");
         Optional.ofNullable(player).ifPresent(p -> p.controls().stop());
-        state = State.STOPPED;
     }
 
     public void play() {
         log.debug("playing");
         Optional.ofNullable(player).ifPresent(p -> p.controls().start());
-        state = State.PLAYING;
     }
 
     public void quit(final Exception e) {
@@ -222,7 +216,7 @@ public class Application {
                 final int columnLength = Math.max(0, columns / 3);
                 log.debug("rows: {}, half: {}, index: {}, startIndex: {}, entries: {}", rows, half, index,
                         startIndex, entries.size());
-                for (int i = startIndex; i < startIndex + rows; ++i) {
+                for (int i = startIndex; i < startIndex + rows - 1; ++i) {
                     final Entry current = (i > entries.size() - 1) ? null : entries.get(i);
 
                     if (current == null) {
@@ -249,11 +243,12 @@ public class Application {
     }
 
     public String getStatusLine(final int length) {
+        var mode = (player.status().isPlaying()) ? "playing" : "stopped";
         final String status = String.format(STATUS,
                 getVersion(),
                 entries.size(),
                 Optional.ofNullable(player).map(p -> p.audio().volume()).orElse(0),
-                state.toString().toLowerCase());
+                mode);
         return status + " ".repeat(Math.max(0, length - status.length()));
     }
 
