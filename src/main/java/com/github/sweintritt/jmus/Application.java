@@ -97,6 +97,7 @@ public final class Application {
             case '+' -> setVolume(player.audio().volume() + 10);
             case '-' -> setVolume(player.audio().volume() - 10);
             case 'r' -> toggleRandom();
+            default -> log.trace("unknown key {}", key);
         }
     }
 
@@ -133,7 +134,7 @@ public final class Application {
     public void back() {
         log.debug("playing previous song. index stack size: {}", playStack.size());
         if (!playStack.isEmpty()) {
-            var index = entries.indexOf(playStack.poll());
+            index = entries.indexOf(playStack.poll());
             play(index);
         }
     }
