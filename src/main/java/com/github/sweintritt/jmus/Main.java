@@ -21,9 +21,8 @@ public class Main {
             }
 
             final Application application = new Application();
-            application.setDirectory(file);
             log.info("starting...");
-            application.run();
+            application.run(file);
         } catch (final Throwable e) {
             System.err.println(e.getMessage());
             log.error(e.getMessage(), e);

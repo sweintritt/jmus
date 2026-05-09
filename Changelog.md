@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added 'back' command.
+- Switch between random and sorted order of songs
 
 ### Fixed
 

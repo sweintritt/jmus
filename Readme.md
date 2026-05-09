@@ -24,13 +24,14 @@ executed by pressing the button in brackets.
 
 ## Commands
 
-* `q` - Quit jmus
-* `s` - Stop playing
-* `p` - Start playing
-* `b` - Play the previous song
-* `n` - Play the next song
-* `+` - Increase the volume
-* `-` - Decrease the columne
+- `q` - Quit jmus
+- `s` - Stop playing
+- `p` - Start playing
+- `b` - Play the previous song
+- `n` - Play the next song
+- `r` - Switch between sorted or random playing order
+- `+` - Increase the volume
+- `-` - Decrease the columne
 
 # Build
 
@@ -56,4 +57,3 @@ jmus creates a log file in your home folder `.jmus.log`. The file is cleared on 
 # Dependencies
 
 - [vlc](https://code.videolan.org/videolan/vlc) for playback
-

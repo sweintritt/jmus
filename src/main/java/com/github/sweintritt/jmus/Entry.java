@@ -13,9 +13,12 @@ import uk.co.caprica.vlcj.media.*;
 
 @Slf4j
 @Data
-public class Entry {
+public final class Entry implements Comparable<Entry> {
 
     private static final MediaPlayerFactory MEDIA_FACTORY = new MediaPlayerFactory();
+    private static final Comparator<Entry> COMPARATOR = Comparator.comparing(Entry::getArtist)
+            .thenComparing(Entry::getAlbum)
+            .thenComparing(Entry::getTitle);
 
     private final File file;
     private final Media media;
@@ -95,9 +98,8 @@ public class Entry {
         return title;
     }
 
-    public static Comparator<Entry> orderByArtistAblumName() {
-        return Comparator.comparing(Entry::getArtist)
-                .thenComparing(Entry::getAlbum)
-                .thenComparing(Entry::getTitle);
+    @Override
+    public int compareTo(final Entry entry) {
+        return COMPARATOR.compare(this, entry);
     }
 }
