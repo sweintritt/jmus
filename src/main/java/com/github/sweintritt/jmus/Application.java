@@ -217,7 +217,6 @@ public final class Application {
                     terminal.writer().println(StringUtils.EMPTY);
                 }
             } else {
-                final int index = entries.indexOf(entry);
                 // Try to position the current title in the middle of the screen
                 final int half = Math.floorDiv(rows, 2);
                 int startIndex = index - half;
