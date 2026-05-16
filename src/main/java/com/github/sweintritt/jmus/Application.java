@@ -34,18 +34,29 @@ public final class Application {
 
     private final List<Entry> entries = new LinkedList<>();
     private final Queue<Entry> playStack = new LimitedLiFoQueue<>(100);
+    private final MediaPlayer player;
+    private final Terminal terminal;
 
+    private String version;
     private Entry entry;
     private Mode mode = Mode.SORTED;
-    private String version;
     private int volume = 50;
-    private MediaPlayer player;
-    private Terminal terminal;
     private boolean running;
     private int index = -1;
 
     public Application() throws IOException {
-       terminal = TerminalBuilder.builder().build();
+        log.debug("init application");
+        terminal = TerminalBuilder.builder().build();
+        player = MEDIA_FACTORY.mediaPlayers().newMediaPlayer();
+        try {
+            version = "v"
+                    + new String(IOUtils.toByteArray(Objects.requireNonNull(this.getClass().getClassLoader()
+                    .getResourceAsStream("version.txt"))));
+        } catch (final IOException e) {
+            log.error("Unable to read version: {}", e.getMessage(), e);
+            version = StringUtils.EMPTY;
+        }
+        log.debug("application ready");
     }
 
     /**
@@ -115,7 +126,7 @@ public final class Application {
     public void setVolume(final int volume) {
         log.debug("set volume to {}", volume);
         this.volume = Math.clamp(volume, 0, 100);
-        Optional.ofNullable(player).ifPresent(p -> p.audio().setVolume(this.volume));
+        player.audio().setVolume(this.volume);
     }
 
     public void next() {
@@ -140,21 +151,22 @@ public final class Application {
     }
 
     public void play(final int index) {
-        Optional.ofNullable(player).ifPresent(p -> p.controls().stop());
-        Optional.ofNullable(player).ifPresent(MediaPlayer::release);
+        stop();
         try {
             entry = entries.get(index);
             log.info("playing {}, index:{}", entry.getFile().getName(), index);
-            player = MEDIA_FACTORY.mediaPlayers().newMediaPlayer();
-            player.media().play(entry.getMedia().info().mrl());
+            player.media().prepare(entry.getMedia().info().mrl());
             player.events().addMediaPlayerEventListener(new MediaPlayerEventAdapter() {
                 @Override
                 public void finished(final MediaPlayer player) {
-                    next();
+                    // vlc controls cannot be called from the vlc event thread
+                    CompletableFuture.runAsync(() -> {
+                        next();
+                        draw();
+                    });
                 }
             });
-            player.audio().setVolume(volume);
-            this.play();
+            play();
         } catch (final Exception e) {
             log.error("Error during playback: {} ", e.getMessage(), e);
         }
@@ -162,18 +174,19 @@ public final class Application {
 
     public void stop() {
         log.debug("stopping");
-        Optional.ofNullable(player).ifPresent(p -> p.controls().stop());
+        player.controls().stop();
     }
 
     public void play() {
         log.debug("playing");
-        Optional.ofNullable(player).ifPresent(p -> p.controls().start());
+        player.controls().start();
     }
 
     public void quit(final Exception e) {
         log.debug("quiting");
         setRunning(false);
         stop();
+        player.release();
         clearScreen();
         if (e != null) {
             log.error(e.getMessage(), e);
@@ -244,27 +257,12 @@ public final class Application {
     }
 
     public String getStatusLine(final int length) {
-        var mode = (player.status().isPlaying()) ? "playing" : "stopped";
         final String status = String.format(STATUS,
-                getVersion(),
+                version,
                 entries.size(),
-                Optional.ofNullable(player).map(p -> p.audio().volume()).orElse(0),
-                mode);
+                volume,
+                player.status().isPlaying() ? "playing" : "stopped");
         return status + " ".repeat(Math.max(0, length - status.length()));
-    }
-
-    public String getVersion() {
-        if (version == null) {
-            try {
-                version = "v"
-                        + new String(IOUtils.toByteArray(Objects.requireNonNull(this.getClass().getClassLoader()
-                                .getResourceAsStream("version.txt"))));
-            } catch (final IOException e) {
-                log.error("Unable to read version: {}", e.getMessage(), e);
-                version = StringUtils.EMPTY;
-            }
-        }
-        return version;
     }
 
     public String getFullTitle(final Entry entry, final int columnLength) {
