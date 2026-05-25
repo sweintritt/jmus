@@ -24,12 +24,13 @@ executed by pressing the button in brackets.
 
 ## Commands
 
-- `q` - Quit jmus
-- `s` - Stop playing
-- `p` - Start playing
 - `b` - Play the previous song
+- `h` - Show help page
 - `n` - Play the next song
+- `p` - Start playing
+- `q` - Quit jmus
 - `r` - Switch between sorted or random playing order
+- `s` - Stop playing
 - `+` - Increase the volume
 - `-` - Decrease the columne
 

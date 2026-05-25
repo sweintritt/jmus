@@ -9,7 +9,7 @@
     <version>0.2.0</version>
 
     <description>
-        Simple audio player to play your local library on shuffle.
+        Simple audio player to play your local library.
     </description>
 
     <url>https://github.com/sweintritt/jmus</url>

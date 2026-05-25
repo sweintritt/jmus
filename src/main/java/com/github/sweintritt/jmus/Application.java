@@ -24,12 +24,13 @@ import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter;
 public final class Application {
 
     private enum Mode {
-        SORTED,
-        RANDOM
+        HELP, ENTRIES
+    }
+    private enum Order {
+        SORTED, RANDOM
     }
 
-    private static final String STATUS = "[ jmus %s | %d files | vol:%d | %s ] (q)uit, (s)top, (p)lay, (b)ack, " +
-            "(n)ext, (+)vol, (-)vol, (r)and";
+    private static final String STATUS = "[ jmus %s | %d files | vol:%d | %s ] press h for help";
     private static final MediaPlayerFactory MEDIA_FACTORY = new MediaPlayerFactory();
 
     private final List<Entry> entries = new LinkedList<>();
@@ -39,7 +40,8 @@ public final class Application {
 
     private String version;
     private Entry entry;
-    private Mode mode = Mode.SORTED;
+    private Mode mode = Mode.ENTRIES;
+    private Order order = Order.SORTED;
     private int volume = 50;
     private boolean running;
     private int index = -1;
@@ -51,7 +53,7 @@ public final class Application {
         try {
             version = "v"
                     + new String(IOUtils.toByteArray(Objects.requireNonNull(this.getClass().getClassLoader()
-                    .getResourceAsStream("version.txt"))));
+                            .getResourceAsStream("version.txt"))));
         } catch (final IOException e) {
             log.error("Unable to read version: {}", e.getMessage(), e);
             version = StringUtils.EMPTY;
@@ -108,19 +110,29 @@ public final class Application {
             case '+' -> setVolume(player.audio().volume() + 10);
             case '-' -> setVolume(player.audio().volume() - 10);
             case 'r' -> toggleRandom();
+            case 'h' -> toggleHelp();
+            // TODO esc should also exit help view
             default -> log.trace("unknown key {}", key);
         }
     }
 
+    public void toggleHelp() {
+        if (Mode.HELP == mode) {
+            mode = Mode.ENTRIES;
+        } else {
+            mode = Mode.HELP;
+        }
+    }
+
     public void toggleRandom() {
-       if (Mode.RANDOM == mode) {
-           Collections.sort(entries);
-           mode = Mode.SORTED;
-       } else {
-           Collections.shuffle(entries);
-           mode = Mode.RANDOM;
-       }
-       index = entries.indexOf(entry);
+        if (Order.RANDOM == order) {
+            Collections.sort(entries);
+            order = Order.SORTED;
+        } else {
+            Collections.shuffle(entries);
+            order = Order.RANDOM;
+        }
+        index = entries.indexOf(entry);
     }
 
     public void setVolume(final int volume) {
@@ -212,37 +224,10 @@ public final class Application {
             var columns = terminal.getWidth();
             clearScreen();
 
-            if (entries.isEmpty()) {
-                for (int i = 0; i < rows; ++i) {
-                    terminal.writer().println(StringUtils.EMPTY);
-                }
-            } else {
-                // Try to position the current title in the middle of the screen
-                final int half = Math.floorDiv(rows, 2);
-                int startIndex = index - half;
-                if (index + half > entries.size()) {
-                    startIndex -= (index + half) - entries.size();
-                }
-
-                // Ensure that the start index is in bounds of the entry list
-                startIndex = Math.clamp(startIndex, 0, entries.size());
-                final int columnLength = Math.max(0, columns / 3);
-                log.debug("rows: {}, half: {}, index: {}, startIndex: {}, entries: {}", rows, half, index,
-                        startIndex, entries.size());
-                for (int i = startIndex; i < startIndex + rows - 1; ++i) {
-                    final Entry current = (i > entries.size() - 1) ? null : entries.get(i);
-
-                    if (current == null) {
-                        log.debug("no entry at {}", i);
-                        terminal.writer().println(StringUtils.EMPTY);
-                    } else if (i == index) {
-                        var styled = new AttributedString(getFullTitle(current, columnLength),
-                                AttributedStyle.DEFAULT.foreground(AttributedStyle.WHITE).background(AttributedStyle.BLUE));
-                        styled.println(terminal);
-                    } else {
-                        terminal.writer().println(getFullTitle(current, columnLength));
-                    }
-                }
+            switch (mode) {
+                case Mode.ENTRIES -> drawEntries(columns, rows);
+                case Mode.HELP -> drawHelp(rows);
+                default -> drawEmpty(rows);
             }
 
             // Print status line
@@ -252,6 +237,74 @@ public final class Application {
             terminal.flush();
         } catch (final Exception e) {
             quit(e);
+        }
+    }
+
+    public void drawHelp(final int rows) {
+        // TODO show license
+        // TODO show creator
+        var help = List.of(
+            "jmus " + version,
+            StringUtils.EMPTY,
+            "Simple audio player to play your local library. jmus is designed to be very easy to use,",
+            "with just a few simple keys.",
+            StringUtils.EMPTY,
+            "Keys",
+            StringUtils.EMPTY,
+            "  b - play previous song",
+            "  h - show this help text",
+            "  n - play next song",
+            "  p - start playing",
+            "  q - quit jmus",
+            "  r - switch between random or sorted song order",
+            "  s - stop playing",
+            "  + - increase volume",
+            "  - - decrease volume"
+        );
+
+        help.forEach(l -> terminal.writer().println(l));
+        for (var i = help.size(); i < rows - 1; ++i) {
+            terminal.writer().println(StringUtils.EMPTY);
+        }
+    }
+
+    public void drawEntries(final int columns, final int rows) {
+        if (entries.isEmpty()) {
+            drawEmpty(rows);
+        } else {
+            // Try to position the current title in the middle of the screen
+            final int half = Math.floorDiv(rows, 2);
+            int startIndex = index - half;
+            if (index + half > entries.size()) {
+                startIndex -= (index + half) - entries.size();
+            }
+
+            // Ensure that the start index is in bounds of the entry list
+            startIndex = Math.clamp(startIndex, 0, entries.size());
+            final int columnLength = Math.max(0, columns / 3);
+            log.debug("rows: {}, half: {}, index: {}, startIndex: {}, entries: {}", rows, half, index,
+                    startIndex, entries.size());
+            for (int i = startIndex; i < startIndex + rows - 1; ++i) {
+                final Entry current = (i > entries.size() - 1) ? null : entries.get(i);
+
+                if (current == null) {
+                    log.debug("no entry at {}", i);
+                    terminal.writer().println(StringUtils.EMPTY);
+                } else if (i == index) {
+                    var styled = new AttributedString(getFullTitle(current, columnLength),
+                            AttributedStyle.DEFAULT.foreground(AttributedStyle.WHITE)
+                                    .background(AttributedStyle.BLUE));
+                    styled.println(terminal);
+                } else {
+                    terminal.writer().println(getFullTitle(current, columnLength));
+                }
+            }
+        }
+    }
+
+    private void drawEmpty(final int rows) {
+        for (int i = 0; i < rows; ++i) {
+            terminal.writer().println(StringUtils.EMPTY);
         }
     }
 
