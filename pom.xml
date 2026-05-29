@@ -16,10 +16,12 @@
 
     <licenses>
         <license>
-            <name>MIT License</name>
+            <name>GPL v3</name>
+            <url>http://www.gnu.org/licenses/gpl-3.0.html</url>
+            <distribution>repo</distribution>
         </license>
     </licenses>
-
+ 
     <developers>
         <developer>
             <id>sweintritt</id>
@@ -211,9 +213,9 @@
                     <version>${project.version}</version>
                     <summary>${project.description}</summary>
                     <url>https://github.com/sweintritt/jmus/</url>
-                    <license>MIT</license>
+                    <license>${project.licenses[0].name}</license>
                     <requires>
-                        <require>java-21-openjdk</require>
+                        <require>java-${maven.compiler.target}-openjdk</require>
                         <require>vlc-libs &gt; 3.0.0</require>
                         <require>vlc-plugins-base &gt; 3.0.0</require>
                     </requires>

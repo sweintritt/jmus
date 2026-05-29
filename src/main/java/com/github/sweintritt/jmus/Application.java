@@ -241,25 +241,27 @@ public final class Application {
     }
 
     public void drawHelp(final int rows) {
-        // TODO show license
-        // TODO show creator
         var help = List.of(
-            "jmus " + version,
+            "jmus - " + version,
             StringUtils.EMPTY,
-            "Simple audio player to play your local library. jmus is designed to be very easy to use,",
-            "with just a few simple keys.",
+            "--------------------------------------------------",
             StringUtils.EMPTY,
-            "Keys",
+            "Simple audio player to play your local library.",
+            "jmus is designed to be very easy to use, with just",
+            "a few simple keys.",
             StringUtils.EMPTY,
-            "  b - play previous song",
-            "  h - show this help text",
-            "  n - play next song",
-            "  p - start playing",
-            "  q - quit jmus",
-            "  r - switch between random or sorted song order",
-            "  s - stop playing",
-            "  + - increase volume",
-            "  - - decrease volume"
+            StringUtils.EMPTY,
+            "Mappings",
+            StringUtils.EMPTY,
+            " b: play previous song",
+            " h: show this help text",
+            " n: play next song",
+            " p: start playing",
+            " q: quit jmus",
+            " r: switch between random or sorted song order",
+            " s: stop playing",
+            " +: increase volume",
+            " -: decrease volume"
         );
 
         help.forEach(l -> terminal.writer().println(l));
