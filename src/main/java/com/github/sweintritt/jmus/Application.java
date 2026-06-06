@@ -8,56 +8,55 @@ import java.util.concurrent.CompletableFuture;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 import org.jline.utils.*;
-import uk.co.caprica.vlcj.factory.MediaPlayerFactory;
-import uk.co.caprica.vlcj.player.base.MediaPlayer;
-import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter;
 
 @Slf4j
 @Getter
 @Setter
 public final class Application {
 
-    private enum Mode {
+    public enum Mode {
         HELP, ENTRIES
     }
-    private enum Order {
+
+    public enum Order {
         SORTED, RANDOM
     }
 
     private static final String STATUS = "[ jmus %s | %d files | vol:%d | %s ] press h for help";
-    private static final MediaPlayerFactory MEDIA_FACTORY = new MediaPlayerFactory();
 
     private final List<Entry> entries = new LinkedList<>();
     private final Queue<Entry> playStack = new LimitedLiFoQueue<>(100);
-    private final MediaPlayer player;
+    private final Player player;
     private final Terminal terminal;
+    private final Properties properties;
 
-    private String version;
     private Entry entry;
     private Mode mode = Mode.ENTRIES;
     private Order order = Order.SORTED;
-    private int volume = 50;
     private boolean running;
     private int index = -1;
 
     public Application() throws IOException {
+        this(new Player(), TerminalBuilder.builder().build());
+    }
+
+    Application(final Player player, final Terminal terminal) {
         log.debug("init application");
-        terminal = TerminalBuilder.builder().build();
-        player = MEDIA_FACTORY.mediaPlayers().newMediaPlayer();
+        this.terminal = terminal;
+        this.player = player;
+        this.properties = new Properties();
+
         try {
-            version = "v"
-                    + new String(IOUtils.toByteArray(Objects.requireNonNull(this.getClass().getClassLoader()
-                            .getResourceAsStream("version.txt"))));
+            properties.load(Application.class.getClassLoader().getResourceAsStream("application.properties"));
         } catch (final IOException e) {
             log.error("Unable to read version: {}", e.getMessage(), e);
-            version = StringUtils.EMPTY;
         }
+
         log.debug("application ready");
     }
 
@@ -76,8 +75,7 @@ public final class Application {
             next();
             while (running) {
                 draw();
-                final int key = terminal.reader().read();
-                handleKey(key);
+                handleKey(terminal.reader().read());
             }
         } catch (final Exception e) {
             quit(e);
@@ -104,11 +102,11 @@ public final class Application {
         switch (key) {
             case 'n' -> next();
             case 'b' -> back();
-            case 'p' -> play();
-            case 's' -> stop();
+            case 'p' -> player.play();
+            case 's' -> player.pause();
             case 'q' -> quit();
-            case '+' -> setVolume(player.audio().volume() + 10);
-            case '-' -> setVolume(player.audio().volume() - 10);
+            case '+' -> player.setVolume(player.getVolume() + 10);
+            case '-' -> player.setVolume(player.getVolume() - 10);
             case 'r' -> toggleRandom();
             case 'h' -> toggleHelp();
             // TODO esc should also exit help view
@@ -135,12 +133,6 @@ public final class Application {
         index = entries.indexOf(entry);
     }
 
-    public void setVolume(final int volume) {
-        log.debug("set volume to {}", volume);
-        this.volume = Math.clamp(volume, 0, 100);
-        player.audio().setVolume(this.volume);
-    }
-
     public void next() {
         log.debug("playing next song");
         if (entry != null) {
@@ -163,46 +155,31 @@ public final class Application {
     }
 
     public void play(final int index) {
-        stop();
+        player.stop();
         try {
             entry = entries.get(index);
             log.info("playing {}, index:{}", entry.getFile().getName(), index);
-            player.media().prepare(entry.getMedia().info().mrl());
-            player.events().addMediaPlayerEventListener(new MediaPlayerEventAdapter() {
-                @Override
-                public void finished(final MediaPlayer player) {
-                    // vlc controls cannot be called from the vlc event thread
-                    CompletableFuture.runAsync(() -> {
-                        next();
-                        draw();
-                    });
-                }
+            player.prepare(entry.getMedia().info().mrl());
+            player.onMediaEnd(() -> {
+                next();
+                draw();
             });
-            play();
+            player.play();
         } catch (final Exception e) {
             log.error("Error during playback: {} ", e.getMessage(), e);
         }
     }
 
-    public void stop() {
-        log.debug("stopping");
-        player.controls().stop();
-    }
-
-    public void play() {
-        log.debug("playing");
-        player.controls().start();
-    }
-
     public void quit(final Exception e) {
         log.debug("quiting");
         setRunning(false);
-        stop();
+        player.stop();
         player.release();
         clearScreen();
         if (e != null) {
             log.error(e.getMessage(), e);
             System.err.println("Error: " + e.getMessage());
+            System.exit(1);
         }
         System.exit(0);
     }
@@ -242,26 +219,26 @@ public final class Application {
 
     public void drawHelp(final int rows) {
         var help = List.of(
-            "jmus - " + version,
-            StringUtils.EMPTY,
-            "--------------------------------------------------",
-            StringUtils.EMPTY,
-            "Simple audio player to play your local library.",
-            "jmus is designed to be very easy to use, with just",
-            "a few simple keys.",
-            StringUtils.EMPTY,
-            StringUtils.EMPTY,
-            "Mappings",
-            StringUtils.EMPTY,
-            " b: play previous song",
-            " h: show this help text",
-            " n: play next song",
-            " p: start playing",
-            " q: quit jmus",
-            " r: switch between random or sorted song order",
-            " s: stop playing",
-            " +: increase volume",
-            " -: decrease volume"
+                "jmus - v" + properties.get("version") + " - " + properties.get("license"),
+                StringUtils.EMPTY,
+                "--------------------------------------------------",
+                StringUtils.EMPTY,
+                "Simple audio player to play your local library.",
+                "jmus is designed to be very easy to use, with just",
+                "a few simple keys.",
+                StringUtils.EMPTY,
+                StringUtils.EMPTY,
+                "Mappings",
+                StringUtils.EMPTY,
+                " b: play previous song",
+                " h: show this help text",
+                " n: play next song",
+                " p: start playing",
+                " q: quit jmus",
+                " r: switch between random or sorted song order",
+                " s: stop playing",
+                " +: increase volume",
+                " -: decrease volume"
         );
 
         help.forEach(l -> terminal.writer().println(l));
@@ -312,10 +289,10 @@ public final class Application {
 
     public String getStatusLine(final int length) {
         final String status = String.format(STATUS,
-                version,
+                properties.get("version"),
                 entries.size(),
-                volume,
-                player.status().isPlaying() ? "playing" : "stopped");
+                player.getVolume(),
+                player.isPlaying() ? "playing" : "stopped");
         return status + " ".repeat(Math.max(0, length - status.length()));
     }
 
