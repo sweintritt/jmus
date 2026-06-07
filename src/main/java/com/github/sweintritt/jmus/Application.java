@@ -17,7 +17,7 @@ import org.jline.utils.*;
 @Slf4j
 @Getter
 @Setter
-public final class Application {
+final class Application {
 
     public enum Mode {
         HELP, ENTRIES
@@ -41,7 +41,7 @@ public final class Application {
     private boolean running;
     private int index = -1;
 
-    public Application() throws IOException {
+    Application() throws IOException {
         this(new Player(), TerminalBuilder.builder().build());
     }
 
@@ -63,7 +63,7 @@ public final class Application {
     /**
      * @param directory Root directory to scan for music
      */
-    public void run(final File directory) {
+    void run(final File directory) {
         try {
             log.info("scanning {}", directory.getAbsoluteFile());
             loadFiles(directory);
@@ -82,7 +82,7 @@ public final class Application {
         }
     }
 
-    private void loadFiles(final File dir) {
+    void loadFiles(final File dir) {
         log.info("searching {}", dir.getName());
         final File[] files = dir.listFiles();
         if (files != null) {
@@ -97,7 +97,7 @@ public final class Application {
         }
     }
 
-    public void handleKey(final int key) {
+    void handleKey(final int key) {
         log.debug("key:{}", key);
         switch (key) {
             case 'n' -> next();
@@ -114,7 +114,7 @@ public final class Application {
         }
     }
 
-    public void toggleHelp() {
+    void toggleHelp() {
         if (Mode.HELP == mode) {
             mode = Mode.ENTRIES;
         } else {
@@ -122,7 +122,7 @@ public final class Application {
         }
     }
 
-    public void toggleRandom() {
+    void toggleRandom() {
         if (Order.RANDOM == order) {
             Collections.sort(entries);
             order = Order.SORTED;
@@ -133,7 +133,7 @@ public final class Application {
         index = entries.indexOf(entry);
     }
 
-    public void next() {
+    void next() {
         log.debug("playing next song");
         if (entry != null) {
             playStack.add(entry);
@@ -146,7 +146,7 @@ public final class Application {
     /**
      * Jump back one track in the list
      */
-    public void back() {
+    void back() {
         log.debug("playing previous song. index stack size: {}", playStack.size());
         if (!playStack.isEmpty()) {
             index = entries.indexOf(playStack.poll());
@@ -154,7 +154,7 @@ public final class Application {
         }
     }
 
-    public void play(final int index) {
+    void play(final int index) {
         player.stop();
         try {
             entry = entries.get(index);
@@ -170,7 +170,7 @@ public final class Application {
         }
     }
 
-    public void quit(final Exception e) {
+    void quit(final Exception e) {
         log.debug("quiting");
         setRunning(false);
         player.stop();
@@ -184,17 +184,17 @@ public final class Application {
         System.exit(0);
     }
 
-    public void quit() {
+    void quit() {
         quit(null);
     }
 
-    public void clearScreen() {
+    void clearScreen() {
         log.debug("clear screen");
         terminal.puts(InfoCmp.Capability.clear_screen);
         terminal.flush();
     }
 
-    public void draw() {
+    void draw() {
         try {
             log.debug("draw");
             var rows = terminal.getHeight();
@@ -217,7 +217,7 @@ public final class Application {
         }
     }
 
-    public void drawHelp(final int rows) {
+    void drawHelp(final int rows) {
         var help = List.of(
                 "jmus - v" + properties.get("version") + " - " + properties.get("license"),
                 StringUtils.EMPTY,
@@ -247,7 +247,7 @@ public final class Application {
         }
     }
 
-    public void drawEntries(final int columns, final int rows) {
+    void drawEntries(final int columns, final int rows) {
         if (entries.isEmpty()) {
             drawEmpty(rows);
         } else {
@@ -281,13 +281,13 @@ public final class Application {
         }
     }
 
-    private void drawEmpty(final int rows) {
+    void drawEmpty(final int rows) {
         for (int i = 0; i < rows; ++i) {
             terminal.writer().println(StringUtils.EMPTY);
         }
     }
 
-    public String getStatusLine(final int length) {
+    String getStatusLine(final int length) {
         final String status = String.format(STATUS,
                 properties.get("version"),
                 entries.size(),
@@ -296,12 +296,12 @@ public final class Application {
         return status + " ".repeat(Math.max(0, length - status.length()));
     }
 
-    public String getFullTitle(final Entry entry, final int columnLength) {
+    String getFullTitle(final Entry entry, final int columnLength) {
         return fitToWidth(entry.getArtist(), columnLength) + fitToWidth(entry.getAlbum(), columnLength)
                 + fitToWidth(entry.getTitle(), columnLength);
     }
 
-    public String fitToWidth(final String message, final int width) {
+    String fitToWidth(final String message, final int width) {
         final String msg = StringUtils.trim(message);
         return StringUtils.abbreviate(StringUtils.trim(msg), "... ", width)
                 + StringUtils.SPACE.repeat(Math.max(0, width - StringUtils.length(msg)));
