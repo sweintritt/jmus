@@ -30,7 +30,7 @@ final class Application {
     private static final String STATUS = "[ jmus %s | %d files | vol:%d | %s ] press h for help";
 
     private final List<Entry> entries = new LinkedList<>();
-    private final Queue<Entry> playStack = new LimitedLiFoQueue<>(100);
+    private final Queue<Entry> playStack = new LimitedStack<>(100);
     private final Player player;
     private final Terminal terminal;
     private final Properties properties;
