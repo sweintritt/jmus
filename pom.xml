@@ -50,6 +50,8 @@
         <version.junit>6.0.3</version.junit>
         <version.jline>4.0.9</version.jline>
         <version.vlcj>4.12.1</version.vlcj>
+        <version.systemstubs>2.1.8</version.systemstubs>
+
 
         <!-- Maven plugins - https://maven.apache.org/plugins -->
         <version.compiler.plugin>3.15.0</version.compiler.plugin>
@@ -122,6 +124,13 @@
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
             <version>${version.mockito}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- Source: https://mvnrepository.com/artifact/uk.org.webcompere/system-stubs-jupiter -->
+        <dependency>
+            <groupId>uk.org.webcompere</groupId>
+            <artifactId>system-stubs-jupiter</artifactId>
+            <version>${version.systemstubs}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
