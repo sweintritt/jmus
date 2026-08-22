@@ -49,6 +49,11 @@ final class Application {
         log.debug("init application");
         this.terminal = terminal;
         this.player = player;
+        this.player.onMediaEnd(() -> {
+            log.debug("media end");
+            next();
+            draw();
+        });
         this.properties = new Properties();
 
         try {
@@ -109,17 +114,12 @@ final class Application {
             case '-' -> player.setVolume(player.getVolume() - 10);
             case 'r' -> toggleRandom();
             case 'h' -> toggleHelp();
-            // TODO esc should also exit help view
             default -> log.trace("unknown key {}", key);
         }
     }
 
     void toggleHelp() {
-        if (Mode.HELP == mode) {
-            mode = Mode.ENTRIES;
-        } else {
-            mode = Mode.HELP;
-        }
+        mode = Mode.HELP == mode ? Mode.ENTRIES : Mode.HELP;
     }
 
     void toggleRandom() {
@@ -160,10 +160,6 @@ final class Application {
             entry = entries.get(index);
             log.info("playing {}, index:{}", entry.getFile().getName(), index);
             player.prepare(entry.getMedia().info().mrl());
-            player.onMediaEnd(() -> {
-                next();
-                draw();
-            });
             player.play();
         } catch (final Exception e) {
             log.error("Error during playback: {} ", e.getMessage(), e);
@@ -197,8 +193,8 @@ final class Application {
     void draw() {
         try {
             log.debug("draw");
-            var rows = terminal.getHeight();
-            var columns = terminal.getWidth();
+            var rows = terminal.getRows();
+            var columns = terminal.getColumns();
             clearScreen();
 
             switch (mode) {

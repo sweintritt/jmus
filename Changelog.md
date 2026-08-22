@@ -11,7 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - jmus does no longer show the last played songs, but the song list.
 - Using jline instead of libc directly.
-- Using vlcj instead of JavaFX and mp3magic
+- Using vlcj instead of JavaFX and mp3magic.
+- Update to Java 25.
 
 ### Added
 

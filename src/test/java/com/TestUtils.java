@@ -16,7 +16,7 @@ public class TestUtils {
     private static final StringWriter TEST_WRITER = new StringWriter();
     private static final WriterAppender TEST_APPENDER = WriterAppender.newBuilder()
             .setTarget(TEST_WRITER)
-            .setLayout(PatternLayout.newBuilder().withPattern("%p: %m%n").build())
+            .setLayout(PatternLayout.newBuilder().setPattern("%p: %m%n").build())
             .setName("TestAppender")
             .build();
 
