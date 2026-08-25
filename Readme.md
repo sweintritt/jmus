@@ -37,7 +37,7 @@ executed by pressing the button in brackets.
 # Build
 
 To build jmus you need [Maven](https://maven.apache.org/) and a [Java JDK](https://openjdk.org/)
-(min. Version 21).
+(min. Version 25).
 
 You can build an RPM-Package and install it:
 
