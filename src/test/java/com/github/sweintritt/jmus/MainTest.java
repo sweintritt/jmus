@@ -1,11 +1,7 @@
 package com.github.sweintritt.jmus;
 
 import static org.assertj.core.api.Assertions.*;
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
 
-import org.apache.commons.lang3.reflect.FieldUtils;
-import org.apache.logging.log4j.core.util.FileUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;

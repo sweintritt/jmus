@@ -15,10 +15,18 @@ import uk.co.caprica.vlcj.media.*;
 @Data
 public final class Entry implements Comparable<Entry> {
 
-    private static final MediaPlayerFactory MEDIA_FACTORY = new MediaPlayerFactory();
     private static final Comparator<Entry> COMPARATOR = Comparator.comparing(Entry::getArtist)
             .thenComparing(Entry::getAlbum)
             .thenComparing(Entry::getTitle);
+    private static MediaPlayerFactory MEDIA_FACTORY;
+    static {
+        try {
+            MEDIA_FACTORY = new MediaPlayerFactory();
+        } catch (final Exception e) {
+            // vlcj/native libs not available on CI — fall back and avoid blocking
+            throw new IllegalStateException("vlcj MediaPlayerFactory not available", e);
+        }
+    }
 
     private final File file;
     private final Media media;

@@ -3,6 +3,7 @@ package com.github.sweintritt.jmus;
 import lombok.Getter;
 import uk.co.caprica.vlcj.factory.MediaPlayerFactory;
 import uk.co.caprica.vlcj.player.base.MediaPlayer;
+import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -12,46 +13,50 @@ import java.util.concurrent.CompletableFuture;
 @Getter
 public class Player {    
 
-    private final MediaPlayer player;
+    private final MediaPlayer mediaPlayer;
     // If the player is paused, the volume is set to -1,
     // so we need to keep track of the volume separately.
     private int volume = 50;
 
     public Player() {
-        this.player = new MediaPlayerFactory().mediaPlayers().newMediaPlayer();
+        mediaPlayer = new MediaPlayerFactory().mediaPlayers().newMediaPlayer();
     }
 
     public void prepare(String mediaPath) {
-        player.media().prepare(mediaPath);
+        mediaPlayer.media().prepare(mediaPath);
     }
 
     public void play() {
-        player.controls().play();
+        mediaPlayer.controls().play();
     }
 
     public void pause() {
-        player.controls().pause();
+        mediaPlayer.controls().pause();
     }
 
     public void setVolume(int volume) {
         this.volume = Math.clamp(volume, 0, 100);
-        player.audio().setVolume(volume);
+        mediaPlayer.audio().setVolume(volume);
     }
 
     public void stop() {
-        player.controls().stop();
+        mediaPlayer.controls().stop();
     }
 
     public boolean isPlaying() {
-        return player.status().isPlaying();
+        return mediaPlayer.status().isPlaying();
     }
 
     public void release() {
-        player.release();
+        mediaPlayer.release();
     }
 
     public void onMediaEnd(final Runnable runnable) {
-        // vlc controls cannot be called from the vlc event thread
-        CompletableFuture.runAsync(runnable);
+        mediaPlayer.events().addMediaPlayerEventListener(new MediaPlayerEventAdapter() {
+            @Override
+            public void finished(MediaPlayer mediaPlayer) {
+                CompletableFuture.runAsync(runnable);
+            }
+        });
     }
 }
