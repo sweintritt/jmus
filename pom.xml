@@ -6,7 +6,7 @@
 
     <groupId>com.github.sweintritt</groupId>
     <artifactId>jmus</artifactId>
-    <version>0.2.0</version>
+    <version>0.3.0</version>
 
     <description>
         Simple audio player to play your local library.
