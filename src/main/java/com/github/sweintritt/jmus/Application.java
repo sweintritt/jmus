@@ -205,7 +205,10 @@ final class Application {
             clearScreen();
 
             switch (mode) {
-                case Mode.ENTRIES -> drawEntries(columns, rows);
+                case Mode.ENTRIES -> {
+                    drawColumnHeaders(columns);
+                    drawEntries(columns, rows - 1);
+                }
                 case Mode.HELP -> drawHelp(rows);
                 default -> drawEmpty(rows);
             }
@@ -249,6 +252,16 @@ final class Application {
         }
     }
 
+    void drawColumnHeaders(final int columns) {
+        final int columnLength = Math.max(0, columns / 3);
+        var header = fitToWidth("Artist", columnLength) 
+            + fitToWidth("Album", columnLength)
+            + fitToWidth("Title", columnLength);
+        new AttributedString(header,
+            AttributedStyle.DEFAULT.foreground(AttributedStyle.WHITE)
+                    .background(AttributedStyle.GREEN)).println(terminal);
+    }
+
     void drawEntries(final int columns, final int rows) {
         if (entries.isEmpty()) {
             drawEmpty(rows);
@@ -261,8 +274,8 @@ final class Application {
             }
 
             // Ensure that the start index is in bounds of the entry list
-            startIndex = Math.clamp(startIndex, 0, entries.size());
             final int columnLength = Math.max(0, columns / 3);
+            startIndex = Math.clamp(startIndex, 0, entries.size());
             log.debug("rows: {}, half: {}, index: {}, startIndex: {}, entries: {}", rows, half, index,
                     startIndex, entries.size());
             for (int i = startIndex; i < startIndex + rows - 1; ++i) {

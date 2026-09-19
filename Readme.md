@@ -27,12 +27,13 @@ executed by pressing the button in brackets.
 - `b` - Play the previous song
 - `h` - Show help page
 - `n` - Play the next song
-- `p` - Start playing
+- `p` - Start playing or pause if playing
 - `q` - Quit jmus
 - `r` - Switch between sorted or random playing order
-- `s` - Stop playing
 - `+` - Increase the volume
 - `-` - Decrease the columne
+
+![Help screen](doc/screen02.png)
 
 # Build
 
