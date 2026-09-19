@@ -107,14 +107,21 @@ final class Application {
         switch (key) {
             case 'n' -> next();
             case 'b' -> back();
-            case 'p' -> player.play();
-            case 's' -> player.pause();
+            case 'p' -> togglePlayPause();
             case 'q' -> quit();
             case '+' -> player.setVolume(player.getVolume() + 10);
             case '-' -> player.setVolume(player.getVolume() - 10);
             case 'r' -> toggleRandom();
             case 'h' -> toggleHelp();
             default -> log.trace("unknown key {}", key);
+        }
+    }
+
+    void togglePlayPause() {
+        if (player.isPlaying()) {
+            player.pause();
+        } else {
+            player.play();
         }
     }
 
@@ -229,10 +236,9 @@ final class Application {
                 " b: play previous song",
                 " h: show this help text",
                 " n: play next song",
-                " p: start playing",
+                " p: start playing or pause if playing",
                 " q: quit jmus",
                 " r: switch between random or sorted song order",
-                " s: stop playing",
                 " +: increase volume",
                 " -: decrease volume"
         );
